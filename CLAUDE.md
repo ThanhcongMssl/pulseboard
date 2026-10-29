@@ -1,6 +1,6 @@
 # Pulseboard: guide for agents
 
-Marketing analytics pipeline. Scheduled jobs ingest ad spend, traffic, orders and targets from four
+Marketing analytics pipeline. Scheduled jobs ingest ad spend, traffic, orders and targets from five
 sources, precompute daily per-channel KPI reports into MongoDB, and serve them through a read-only
 API and a Next.js dashboard that updates live over WebSocket. This is a public portfolio project, so
 code and commit history are read by reviewers: keep both clean and explainable.
@@ -27,6 +27,7 @@ pnpm install
 pnpm db:up            # mongo (replica set rs0) + redis via docker compose
 cp .env.example .env  # first time only
 pnpm dev              # api :4000, worker, web :3000
+pnpm backfill [days]  # queue ingest flows for the last N days (default 30); worker must run
 pnpm lint && pnpm typecheck && pnpm test   # run all three before every commit
 pnpm format           # prettier --write
 pnpm build            # tsup bundles for api/worker, next build for web
@@ -40,8 +41,9 @@ Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`.
   a calendar day.
 - **Money** is integer cents everywhere (`spend`, `revenue`, `cac`). Convert only for display.
 - **Idempotency:** every raw collection has a unique natural key (documented on its schema in
-  `packages/shared/src/models.ts` and enforced in `packages/db/src/indexes.ts`). Ingest must
-  `updateOne(key, { $set }, { upsert: true })` (or `bulkWrite` of those). Never `insertOne` raw data.
+  `packages/shared/src/models.ts` and enforced in `packages/db/src/indexes.ts`). Ingest writes
+  raw data only through `upsertMany(collection, docs, keyFields)` in `packages/db/src/upsert.ts`.
+  Never `insertOne` raw data.
 - **reports_daily** is a read model: `_id` is `reportId(date, channel)`, one doc per channel plus a
   `channel: "all"` totals row. Only the aggregate job writes it; the API only reads it.
 - KPI ratios come from `packages/shared/src/kpi.ts` and are `null` on a zero denominator.
@@ -70,6 +72,7 @@ Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`.
   (see `.env.example`); the member hostname `mongo` only resolves inside the compose network.
 - Redis runs with `maxmemory-policy noeviction` (BullMQ requires it). BullMQ connections need
   `maxRetriesPerRequest: null`.
+- BullMQ rejects custom job ids containing `:`; flow job ids use `-` (see `apps/worker/src/flows.ts`).
 
 ## Commits
 

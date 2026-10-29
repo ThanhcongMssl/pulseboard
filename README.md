@@ -1,7 +1,7 @@
 # Pulseboard
 
 Marketing analytics pipeline and dashboard. Scheduled jobs ingest ad spend, web traffic, orders and
-targets from four sources, precompute daily per-channel KPIs (spend, revenue, ROAS, CAC, conversion
+targets from five sources, precompute daily per-channel KPIs (spend, revenue, ROAS, CAC, conversion
 rate) into MongoDB, and serve them to a dashboard that updates live.
 
 > 🚧 Work in progress. Architecture, design decisions and screenshots are coming.
@@ -18,6 +18,7 @@ flowchart TB
         subgraph children["ingest jobs (children) · retries + backoff"]
             direction LR
             fb["ingest<br/>facebook_ads"]
+            gads["ingest<br/>google_ads"]
             ga["ingest<br/>ga4"]
             sh["ingest<br/>shopify"]
             gs["ingest<br/>sheets_targets"]
@@ -59,7 +60,7 @@ flowchart TB
     web -- "refetch" --> rest
 ```
 
-1. A repeatable schedule starts one flow per date: four ingest jobs (children) and one aggregate job
+1. A repeatable schedule starts one flow per date: five ingest jobs (children) and one aggregate job
    (parent) that BullMQ holds until every child has finished.
 2. Each ingest job pulls from its connector and upserts raw rows on a natural key, so re-running a
    day never double-counts. If a source still fails after its retries, the aggregate runs anyway with
@@ -82,7 +83,10 @@ Requires Node 24, pnpm (via `corepack enable`) and Docker.
 pnpm install
 cp .env.example .env
 pnpm db:up   # MongoDB replica set + Redis
-pnpm dev     # api :4000, worker, web :3000
+pnpm dev       # api :4000, worker, web :3000
+pnpm backfill  # in a second terminal: queue the last 30 days (or `pnpm backfill 90`)
 ```
 
 Data sources are simulated connectors with deterministic seed data, so no API keys are needed.
+The worker re-ingests today and yesterday every `INGEST_EVERY_MINUTES`. To watch retries and stale
+sources, set `CONNECTOR_FAILURE_RATE=0.3` in `.env`, which makes about 30% of connector fetches fail.
