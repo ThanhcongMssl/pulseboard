@@ -45,7 +45,10 @@ Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`.
   raw data only through `upsertMany(collection, docs, keyFields)` in `packages/db/src/upsert.ts`.
   Never `insertOne` raw data.
 - **reports_daily** is a read model: `_id` is `reportId(date, channel)`, one doc per channel plus a
-  `channel: "all"` totals row. Only the aggregate job writes it; the API only reads it.
+  `channel: "all"` totals row. Only the aggregate job writes it (one transaction per day, built by
+  the pure `buildDailyReports` in `apps/worker/src/reports.ts`); the API only reads it.
+- The `all` row's ratios come from its totals, never from averaging channel ratios. `staleSources`
+  on every row lists sources whose ingest gave up for that day (their data is the last good copy).
 - KPI ratios come from `packages/shared/src/kpi.ts` and are `null` on a zero denominator.
 - New collection or query pattern → add the index to `ensureIndexes()` in the same change.
 
