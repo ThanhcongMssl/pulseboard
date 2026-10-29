@@ -1,6 +1,6 @@
 import { FlowProducer, Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
-import { closeMongo, connectMongo, ensureIndexes } from '@pulseboard/db';
+import { closeMongo, collections, connectMongo, ensureIndexes } from '@pulseboard/db';
 import {
   lastNDays,
   QUEUES,
@@ -52,6 +52,12 @@ await scheduleQueue.upsertJobScheduler(
   { name: 'ingest-recent', data: { days: 2 } },
 );
 console.log(`worker running; ingesting today and yesterday every ${env.INGEST_EVERY_MINUTES} min`);
+
+// Seed only into an empty database, so restarts never re-queue the history.
+if (env.SEED_DAYS > 0 && (await collections(db).reportsDaily.estimatedDocumentCount()) === 0) {
+  await addDateFlows(flows, lastNDays(env.SEED_DAYS), String(Date.now()));
+  console.log(`no reports yet; queued ${env.SEED_DAYS} days of history`);
+}
 
 async function shutdown() {
   await Promise.all(workers.map((w) => w.close()));

@@ -49,3 +49,16 @@ COPY --from=build --chown=node /repo/apps/web/.next/static ./apps/web/.next/stat
 ENV HOSTNAME=0.0.0.0 PORT=3000
 EXPOSE 3000
 CMD ["node", "apps/web/server.js"]
+
+# api and worker in one container, for free hosting without background workers
+# (see infra/start-all.mjs). Last stage, so it's what a plain `docker build .`
+# produces: Render can't pick a target.
+FROM runtime AS all
+COPY --from=build --chown=node /out/api/node_modules ./api/node_modules
+COPY --from=build --chown=node /repo/apps/api/dist ./api/dist
+COPY --from=build --chown=node /repo/apps/api/package.json ./api/
+COPY --from=build --chown=node /out/worker/node_modules ./worker/node_modules
+COPY --from=build --chown=node /repo/apps/worker/dist ./worker/dist
+COPY --from=build --chown=node /repo/apps/worker/package.json ./worker/
+COPY --chown=node infra/start-all.mjs ./
+CMD ["node", "start-all.mjs"]
