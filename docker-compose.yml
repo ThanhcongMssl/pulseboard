@@ -3,7 +3,7 @@ name: pulseboard
 services:
   mongo:
     image: mongo:8
-    # Single-node replica set: needed for change streams and transactions.
+    # Single-node replica set: multi-document transactions require one.
     command: ['mongod', '--replSet', 'rs0', '--bind_ip_all']
     ports:
       - '127.0.0.1:27017:27017'
