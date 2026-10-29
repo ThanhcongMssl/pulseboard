@@ -29,3 +29,34 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+
+  # End to end: build the images, boot the stack (replica set included), run a
+  # backfill through ingest and aggregate, and read the reports back.
+  stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Start the stack
+        run: docker compose up -d --build --wait --wait-timeout 300
+
+      - name: Backfill a week
+        run: docker compose run --rm worker node dist/backfill.js 7
+
+      - name: Wait for reports
+        run: |
+          for _ in $(seq 1 60); do
+            rows=$(curl -sf 'localhost:4000/reports?channel=all' | jq '.reports | length' || echo 0)
+            echo "reports: $rows"
+            [ "$rows" -ge 7 ] && exit 0
+            sleep 2
+          done
+          echo "no reports after 2 minutes"
+          exit 1
+
+      - name: Dashboard responds
+        run: curl -sf -o /dev/null localhost:3000
+
+      - name: Logs
+        if: failure()
+        run: docker compose logs
