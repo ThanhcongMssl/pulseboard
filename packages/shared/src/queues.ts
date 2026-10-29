@@ -4,6 +4,7 @@ import type { IsoDate, ReportChannel, Source } from './domain.ts';
 export const QUEUES = {
   ingest: 'ingest',
   aggregate: 'aggregate',
+  schedule: 'schedule',
 } as const;
 
 export interface IngestJobData {
@@ -13,6 +14,11 @@ export interface IngestJobData {
 
 export interface AggregateJobData {
   date: IsoDate;
+}
+
+/** Repeatable trigger: start one ingest flow for each of the last `days` days. */
+export interface ScheduleJobData {
+  days: number;
 }
 
 /** Redis pub/sub channel the worker publishes to after rebuilding reports. */

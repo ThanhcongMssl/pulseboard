@@ -11,7 +11,7 @@ export const reportChannelSchema = z.union([channelSchema, z.literal(ALL_CHANNEL
 export type ReportChannel = z.infer<typeof reportChannelSchema>;
 
 /** Upstream systems we ingest from (simulated connectors in the demo). */
-export const SOURCES = ['facebook_ads', 'ga4', 'shopify', 'sheets_targets'] as const;
+export const SOURCES = ['facebook_ads', 'google_ads', 'ga4', 'shopify', 'sheets_targets'] as const;
 export const sourceSchema = z.enum(SOURCES);
 export type Source = z.infer<typeof sourceSchema>;
 

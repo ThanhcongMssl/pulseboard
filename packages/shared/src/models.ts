@@ -83,13 +83,22 @@ export const reportId = (date: string, channel: string) => `${date}:${channel}`;
 
 export const INGEST_STATUSES = ['running', 'succeeded', 'failed'] as const;
 
-/** ingest_runs — job history; also feeds the dashboard's "last updated" badge. */
+/**
+ * ingest_runs — one doc per job attempt, key: (jobId, attempt). Job history;
+ * also feeds the dashboard's "last updated" badge.
+ */
 export const ingestRunSchema = z.object({
+  jobId: z.string(),
+  attempt: z.int().positive(),
   source: sourceSchema,
   date: isoDateSchema,
   status: z.enum(INGEST_STATUSES),
   startedAt: z.date(),
   finishedAt: z.date().nullable(),
+  recordCount: count.nullable(),
   error: z.string().nullable(),
+  // The final attempt failed: this date's reports are built from the
+  // source's last good data. Failures that will still be retried are not stale.
+  stale: z.boolean(),
 });
 export type IngestRun = z.infer<typeof ingestRunSchema>;

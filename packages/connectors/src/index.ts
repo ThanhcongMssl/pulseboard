@@ -1,10 +1,6 @@
-import type { IsoDate, Source } from '@pulseboard/shared';
+import type { DateRange, Source } from '@pulseboard/shared';
 
-/** Inclusive range of UTC calendar days. */
-export interface DateRange {
-  from: IsoDate;
-  to: IsoDate;
-}
+export type { DateRange };
 
 /**
  * A data source the ingest jobs pull from. The demo ships simulated
