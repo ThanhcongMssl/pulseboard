@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm -r --parallel --filter \"./apps/*\" dev",
+    "backfill": "pnpm --filter @pulseboard/worker backfill",
     "build": "pnpm -r --filter \"./apps/*\" build",
     "lint": "eslint .",
     "typecheck": "pnpm -r typecheck",

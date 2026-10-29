@@ -1,24 +1,58 @@
-import { Queue } from 'bullmq';
+import { FlowProducer, Queue, Worker } from 'bullmq';
 import { closeMongo, connectMongo, ensureIndexes } from '@pulseboard/db';
-import { QUEUES, type AggregateJobData, type IngestJobData } from '@pulseboard/shared';
-import { env } from './env.ts';
+import {
+  lastNDays,
+  QUEUES,
+  SOURCES,
+  type AggregateJobData,
+  type IngestJobData,
+  type ScheduleJobData,
+} from '@pulseboard/shared';
+import { aggregateProcessor } from './aggregate.ts';
+import { connection, env } from './env.ts';
+import { addDateFlows } from './flows.ts';
+import { ingestProcessor, type IngestResult } from './ingest.ts';
 
 const db = await connectMongo(env.MONGO_URL);
 await ensureIndexes(db);
 
-// BullMQ needs maxRetriesPerRequest: null so blocking commands are not cut off.
-const connection = { url: env.REDIS_URL, maxRetriesPerRequest: null };
+const flows = new FlowProducer({ connection });
+const scheduleQueue = new Queue<ScheduleJobData>(QUEUES.schedule, { connection });
 
-// Queues only for now; repeatable ingest jobs and their workers come on Day 2.
-const queues = [
-  new Queue<IngestJobData>(QUEUES.ingest, { connection }),
-  new Queue<AggregateJobData>(QUEUES.aggregate, { connection }),
+const workers = [
+  new Worker<IngestJobData, IngestResult>(
+    QUEUES.ingest,
+    ingestProcessor(db, env.CONNECTOR_FAILURE_RATE),
+    { connection, concurrency: SOURCES.length },
+  ),
+  new Worker<AggregateJobData>(QUEUES.aggregate, aggregateProcessor, { connection }),
+  // Each tick refreshes yesterday too, for data that lands late upstream.
+  new Worker<ScheduleJobData>(
+    QUEUES.schedule,
+    (job) => addDateFlows(flows, lastNDays(job.data.days), job.timestamp),
+    { connection },
+  ),
 ];
-await Promise.all(queues.map((q) => q.waitUntilReady()));
-console.log(`worker connected; queues: ${queues.map((q) => q.name).join(', ')}`);
+
+for (const worker of workers) {
+  worker.on('failed', (job, err) => {
+    const attempt = job ? `${job.attemptsMade}/${job.opts.attempts ?? 1}` : '';
+    console.warn(`${worker.name} ${job?.id ?? ''} failed ${attempt}: ${err.message}`);
+  });
+}
+
+// Upserting the scheduler is idempotent, so restarts and extra worker replicas
+// keep a single schedule.
+await scheduleQueue.upsertJobScheduler(
+  'ingest-recent',
+  { every: env.INGEST_EVERY_MINUTES * 60_000 },
+  { name: 'ingest-recent', data: { days: 2 } },
+);
+console.log(`worker running; ingesting today and yesterday every ${env.INGEST_EVERY_MINUTES} min`);
 
 async function shutdown() {
-  await Promise.all(queues.map((q) => q.close()));
+  await Promise.all(workers.map((w) => w.close()));
+  await Promise.all([flows.close(), scheduleQueue.close()]);
   await closeMongo();
   process.exit(0);
 }
