@@ -32,7 +32,13 @@ export function dateFlow(date: IsoDate, runId: string): FlowJob {
     name: 'aggregate',
     queueName: QUEUES.aggregate,
     data: { date, runId } satisfies AggregateJobData,
-    opts: { jobId: `aggregate-${date}-${runId}`, ...keep },
+    // Aggregating is idempotent (it replaces the day's docs), so retrying is safe.
+    opts: {
+      jobId: `aggregate-${date}-${runId}`,
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5_000 },
+      ...keep,
+    },
     children: SOURCES.map((source) => ({
       name: 'ingest',
       queueName: QUEUES.ingest,

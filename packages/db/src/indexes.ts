@@ -15,6 +15,8 @@ export async function ensureIndexes(db: Db): Promise<void> {
     c.rawAdSpend.createIndex({ date: 1, channel: 1 }),
 
     c.rawTraffic.createIndex({ source: 1, date: 1, channel: 1 }, { unique: true }),
+    // The aggregate reads a day across sources; the unique key leads with source.
+    c.rawTraffic.createIndex({ date: 1, channel: 1 }),
 
     c.rawOrders.createIndex({ source: 1, orderId: 1 }, { unique: true }),
     c.rawOrders.createIndex({ date: 1, channel: 1 }),

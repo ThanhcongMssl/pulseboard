@@ -20,6 +20,10 @@ describe('dateFlow', () => {
     }
   });
 
+  it('retries the aggregate too', () => {
+    expect(flow.opts).toMatchObject({ attempts: 3 });
+  });
+
   it('gives every job an id that is unique per run and valid for BullMQ', () => {
     const ids = [flow, ...(flow.children ?? [])].map((j) => j.opts?.jobId);
     expect(new Set(ids).size).toBe(SOURCES.length + 1);

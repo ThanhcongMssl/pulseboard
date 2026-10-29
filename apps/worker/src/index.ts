@@ -1,4 +1,5 @@
 import { FlowProducer, Queue, Worker } from 'bullmq';
+import { Redis } from 'ioredis';
 import { closeMongo, connectMongo, ensureIndexes } from '@pulseboard/db';
 import {
   lastNDays,
@@ -17,6 +18,8 @@ const db = await connectMongo(env.MONGO_URL);
 await ensureIndexes(db);
 
 const flows = new FlowProducer({ connection });
+// Publishes reports-updated events; the API relays them to dashboards.
+const publisher = new Redis(env.REDIS_URL);
 const scheduleQueue = new Queue<ScheduleJobData>(QUEUES.schedule, { connection });
 
 const workers = [
@@ -25,7 +28,7 @@ const workers = [
     ingestProcessor(db, env.CONNECTOR_FAILURE_RATE),
     { connection, concurrency: SOURCES.length },
   ),
-  new Worker<AggregateJobData>(QUEUES.aggregate, aggregateProcessor, { connection }),
+  new Worker<AggregateJobData>(QUEUES.aggregate, aggregateProcessor(db, publisher), { connection }),
   // Each tick refreshes yesterday too, for data that lands late upstream.
   new Worker<ScheduleJobData>(
     QUEUES.schedule,
@@ -52,7 +55,7 @@ console.log(`worker running; ingesting today and yesterday every ${env.INGEST_EV
 
 async function shutdown() {
   await Promise.all(workers.map((w) => w.close()));
-  await Promise.all([flows.close(), scheduleQueue.close()]);
+  await Promise.all([flows.close(), scheduleQueue.close(), publisher.quit()]);
   await closeMongo();
   process.exit(0);
 }
