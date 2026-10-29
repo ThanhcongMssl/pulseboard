@@ -7,6 +7,9 @@ and targets from five sources, precompute daily KPIs per channel (spend, revenue
 conversion rate) into MongoDB, and serve them to a dashboard that refreshes live when new numbers
 land.
 
+**Live demo: [pulseboard-opal.vercel.app](https://pulseboard-opal.vercel.app)** (free hosting: the
+first visit after a quiet spell takes up to a minute while the API wakes up).
+
 TypeScript monorepo · Node.js + Express · BullMQ + Redis · MongoDB replica set · Next.js 16 +
 React 19 + Tailwind 4 + Recharts · Vitest · Docker Compose · GitHub Actions
 
