@@ -31,7 +31,13 @@ pnpm backfill [days]  # queue ingest flows for the last N days (default 30); wor
 pnpm lint && pnpm typecheck && pnpm test   # run all three before every commit
 pnpm format           # prettier --write
 pnpm build            # tsup bundles for api/worker, next build for web
+
+docker compose up -d --build --wait                      # whole stack from the root Dockerfile
+docker compose run --rm worker node dist/backfill.js 30  # backfill inside Docker
 ```
+
+The compose apps and `pnpm dev` both bind ports 3000/4000: run one at a time. The web image bakes
+`NEXT_PUBLIC_*` in at build time (Dockerfile build args), so changing them means rebuilding it.
 
 Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`. Reports:
 `curl 'localhost:4000/reports?channel=all'`.

@@ -1,10 +1,39 @@
 # Pulseboard
 
-Marketing analytics pipeline and dashboard. Scheduled jobs ingest ad spend, web traffic, orders and
-targets from five sources, precompute daily per-channel KPIs (spend, revenue, ROAS, CAC, conversion
-rate) into MongoDB, and serve them to a dashboard that updates live.
+[![CI](https://github.com/ThanhcongMssl/pulseboard/actions/workflows/ci.yml/badge.svg)](https://github.com/ThanhcongMssl/pulseboard/actions/workflows/ci.yml)
 
-> 🚧 Work in progress. Architecture, design decisions and screenshots are coming.
+A marketing analytics pipeline and dashboard. Scheduled jobs ingest ad spend, web traffic, orders
+and targets from five sources, precompute daily KPIs per channel (spend, revenue, ROAS, CAC,
+conversion rate) into MongoDB, and serve them to a dashboard that refreshes live when new numbers
+land.
+
+TypeScript monorepo · Node.js + Express · BullMQ + Redis · MongoDB replica set · Next.js 16 +
+React 19 + Tailwind 4 + Recharts · Vitest · Docker Compose · GitHub Actions
+
+## Quick start
+
+**Everything in Docker** (needs only Docker):
+
+```sh
+docker compose up -d --build --wait
+docker compose run --rm worker node dist/backfill.js 30   # queue 30 days of history
+# dashboard: http://localhost:3000
+```
+
+**Local development** (Node 24, pnpm via `corepack enable`, Docker for the databases):
+
+```sh
+pnpm install
+cp .env.example .env
+pnpm db:up     # MongoDB replica set + Redis only
+pnpm dev       # api :4000, worker, web :3000 (hot reload)
+pnpm backfill  # in a second terminal: queue the last 30 days (or `pnpm backfill 90`)
+```
+
+Both setups use ports 3000 and 4000, so run one at a time. Data sources are simulated (see
+[Connectors](#connectors)), so no API keys are needed. The worker re-ingests today and yesterday
+every `INGEST_EVERY_MINUTES` (default 360). To watch retries and stale-data handling, set
+`CONNECTOR_FAILURE_RATE=0.3`, which makes about 30% of connector fetches fail.
 
 ## Architecture
 
@@ -70,26 +99,61 @@ flowchart TB
 4. It then publishes to Redis. The API relays that to open dashboards over WebSocket, and they
    refetch precomputed reports, so no KPI math happens at request time.
 
-## Stack
+## Design decisions
 
-TypeScript monorepo (pnpm) · Node.js + Express · BullMQ + Redis · MongoDB (replica set) ·
-Next.js + React + Tailwind · Vitest · Docker Compose · GitHub Actions
+**Precompute a read model instead of aggregating per request.** Reports change a few times a day but
+are read constantly. The aggregate job writes one denormalized `reports_daily` document per day and
+channel, plus an `all` totals row, with every KPI already computed
+([`buildDailyReports`](apps/worker/src/reports.ts)). The API only reads (CQRS-style): a 90-day
+dashboard is one indexed range query, and no KPI math runs at request time.
 
-## Run locally
+**A queue between sources and reports.** Each source is its own BullMQ job with retries and
+exponential backoff, so a slow or failing API never blocks the others. A
+[flow](apps/worker/src/flows.ts) makes the aggregate job the _parent_ of the five ingest jobs:
+BullMQ holds it until every child has finished, which guarantees completeness without
+coordination code. Per-source rate limits would be a BullMQ limiter on the ingest queue.
 
-Requires Node 24, pnpm (via `corepack enable`) and Docker.
+**Idempotent by construction.** Every raw collection has a natural key, for example
+`(source, orderId)`, enforced by a unique index. Ingest writes only through
+[`upsertMany`](packages/db/src/upsert.ts), and connectors return the same records for the same day.
+Re-running a day, by retry, schedule or backfill, overwrites rows and never double-counts.
 
-```sh
-pnpm install
-cp .env.example .env
-pnpm db:up   # MongoDB replica set + Redis
-pnpm dev       # api :4000, worker, web :3000
-pnpm backfill  # in a second terminal: queue the last 30 days (or `pnpm backfill 90`)
-```
+**Snapshot reads, transactional writes.** The aggregate reads a day's raw data in a snapshot
+session, so a late retry landing mid-read can't skew the sums. It then replaces the day's six
+report documents in one transaction, so a dashboard never sees new channel rows next to an old
+totals row. Transactions are why MongoDB runs as a (single-node) replica set.
 
-Data sources are simulated connectors with deterministic seed data, so no API keys are needed.
-The worker re-ingests today and yesterday every `INGEST_EVERY_MINUTES`. To watch retries and stale
-sources, set `CONNECTOR_FAILURE_RATE=0.3` in `.env`, which makes about 30% of connector fetches fail.
+**Stale beats blocked.** If a source still fails after its retries, the flow lets the aggregate run
+anyway on that source's last good data, and the report records it in `staleSources`. The dashboard
+stays complete and shows a banner, instead of freezing because one upstream API is down.
+
+**Live updates through Redis pub/sub, not change streams.** The worker knows exactly which dates
+and channels it rebuilt, so it publishes that as an event. The API relays it over WebSocket, and
+the dashboard refetches only if a day on screen changed. A burst from a backfill is debounced into
+one refetch, and a reconnect triggers a refetch in case events were missed.
+
+**Numbers that add up.** Money is integer cents end to end, and days are UTC `YYYY-MM-DD` strings.
+Ratios over a range or across channels are computed from summed totals and never averaged, so
+blended ROAS is all revenue over all spend, and a quiet day doesn't weigh as much as a busy one.
+
+## Trade-offs and scaling
+
+- **Freshness versus cost.** Reports are at most one schedule interval old. The schedule
+  re-ingests only today and yesterday, because older days rarely change. Late corrections to
+  older days need a backfill. A real deployment would re-pull a trailing window sized to each
+  source's attribution delay.
+- **Rebuilding a whole day** is simple and obviously correct at this size (hundreds of orders a
+  day). At millions of rows a day, the aggregate would merge per-source partial sums instead of
+  re-reading every raw row.
+- **At 100× scale:**
+  - Redis pub/sub is fire-and-forget. A durable log (Kafka, Redis Streams) would let consumers
+    replay missed events.
+  - `reports_daily` would shard on `{ channel, date }`.
+  - Ingest workers scale out horizontally, with per-source rate limiters protecting upstream
+    quotas.
+  - Multi-tenant data would add a tenant id to every key and index.
+- **No auth.** It's a demo dashboard; the API is read-only and allows CORS from the dashboard's
+  origin only.
 
 ## Dashboard
 
@@ -128,3 +192,38 @@ curl localhost:4000/status
 Invalid queries get `400 {"error":"invalid_query","issues":{…}}`. Range ratios in `summary` are
 computed from the range's totals, not averaged across days. The `all` row's ROAS is _blended_: all
 revenue over paid spend.
+
+## Connectors
+
+The five sources (Facebook Ads, Google Ads, GA4, Shopify, Google Sheets targets) are **simulated**:
+deterministic generators that derive spend, traffic and orders from one shared model of demand.
+The numbers move together plausibly: weekday patterns, slow growth, ROAS around 2–4. A real
+integration implements the same interface and changes nothing downstream:
+
+```ts
+interface Connector<TRecord> {
+  readonly source: Source;
+  fetch(range: DateRange): Promise<TRecord[]>; // same range → same records, keyed for upserts
+}
+```
+
+Connector output is validated with zod before it's written.
+
+## Project layout
+
+```
+apps/api            Express REST + WebSocket relay (read-only over reports_daily)
+apps/worker         BullMQ: schedule, ingest flows, aggregate job, backfill script
+apps/web            Next.js dashboard
+packages/shared     Domain types, zod schemas, KPI math, API and event contracts (no I/O)
+packages/db         Mongo client, typed collections, indexes, idempotent upserts
+packages/connectors The Connector interface and the five simulated sources
+```
+
+## Testing
+
+- **Unit tests (Vitest, 95 tests):** KPI math, date helpers, report building, range summaries,
+  flow construction, upsert operations, connector determinism and keys, API query validation,
+  the WebSocket relay, and the dashboard's view helpers (filters, chart series, formatting).
+- **CI** runs format, lint, typecheck, tests and builds on every push. A second job builds the
+  Docker images, boots the full stack, backfills a week, and checks that `/reports` returns it.
