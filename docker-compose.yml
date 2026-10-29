@@ -1,0 +1,39 @@
+name: pulseboard
+
+services:
+  mongo:
+    image: mongo:8
+    # Single-node replica set: needed for change streams and transactions.
+    command: ['mongod', '--replSet', 'rs0', '--bind_ip_all']
+    ports:
+      - '127.0.0.1:27017:27017'
+    volumes:
+      - mongo-data:/data/db
+      - ./infra/mongo/healthcheck.js:/healthcheck.js:ro
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '/healthcheck.js']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+      start_interval: 2s
+
+  redis:
+    image: redis:7-alpine
+    # BullMQ requires noeviction so queued jobs are never evicted.
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+      start_interval: 1s
+
+volumes:
+  mongo-data:
+  redis-data:
