@@ -33,7 +33,8 @@ pnpm format           # prettier --write
 pnpm build            # tsup bundles for api/worker, next build for web
 ```
 
-Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`.
+Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`. Reports:
+`curl 'localhost:4000/reports?channel=all'`.
 
 ## Data model rules
 
@@ -49,7 +50,8 @@ Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`.
   the pure `buildDailyReports` in `apps/worker/src/reports.ts`); the API only reads it.
 - The `all` row's ratios come from its totals, never from averaging channel ratios. `staleSources`
   on every row lists sources whose ingest gave up for that day (their data is the last good copy).
-- KPI ratios come from `packages/shared/src/kpi.ts` and are `null` on a zero denominator.
+- KPI ratios come from `packages/shared/src/kpi.ts` and are `null` on a zero denominator. Ratios
+  over a date range come from `summarizeReports` (sum first, then divide), never from averaging.
 - New collection or query pattern → add the index to `ensureIndexes()` in the same change.
 
 ## Conventions
@@ -60,6 +62,10 @@ Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`.
   package's dependency (e.g. `mongodb`) is used at runtime by an app, the app must list it too**.
 - Validate env vars with zod in each app's `src/env.ts`; validate data crossing a boundary
   (connector output, API query params) with the zod schemas from `packages/shared`.
+- API request/response and `/ws` message types live in `packages/shared/src/api.ts` and
+  `queues.ts`, so the dashboard imports the same contract the API validates with.
+- The API's Redis subscriber is a `redis.duplicate()`: a subscribed ioredis connection can't run
+  other commands. Messages read off Redis are validated before they're relayed.
 - Tests: Vitest, next to the code as `*.test.ts`. Pure logic (KPI math, aggregation, date ranges)
   must have tests.
 - TypeScript is pinned to 6.0.x because typescript-eslint doesn't support 7 yet. TS 6 doesn't

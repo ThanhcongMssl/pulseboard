@@ -90,3 +90,23 @@ pnpm backfill  # in a second terminal: queue the last 30 days (or `pnpm backfill
 Data sources are simulated connectors with deterministic seed data, so no API keys are needed.
 The worker re-ingests today and yesterday every `INGEST_EVERY_MINUTES`. To watch retries and stale
 sources, set `CONNECTOR_FAILURE_RATE=0.3` in `.env`, which makes about 30% of connector fetches fail.
+
+## API
+
+Read-only, served from `reports_daily` (no aggregation at request time).
+
+| Endpoint                       | Returns                                                                                                                                       |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /reports?from&to&channel` | Daily rows sorted by date, plus a range `summary` per channel. Defaults to the last 30 days and every channel; ranges are capped at 366 days. |
+| `GET /status`                  | `lastComputedAt` and the last finished ingest attempt of each source, for a "last updated" badge.                                             |
+| `GET /health`                  | Mongo and Redis reachability (`200` or `503`).                                                                                                |
+| `WS /ws`                       | `{"type":"hello"}` on connect, then `{"type":"reports.updated","dates":[…],"channels":[…],"computedAt":…}` after every rebuild.               |
+
+```sh
+curl 'localhost:4000/reports?from=2026-10-01&to=2026-10-29&channel=paid_social'
+curl localhost:4000/status
+```
+
+Invalid queries get `400 {"error":"invalid_query","issues":{…}}`. Range ratios in `summary` are
+computed from the range's totals, not averaged across days. The `all` row's ROAS is _blended_: all
+revenue over paid spend.
