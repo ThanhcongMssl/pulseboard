@@ -17,4 +17,11 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
+  {
+    // Scripts executed by mongosh inside the mongo container.
+    files: ['infra/mongo/**/*.js'],
+    languageOptions: {
+      globals: { db: 'readonly', rs: 'readonly', quit: 'readonly' },
+    },
+  },
 );

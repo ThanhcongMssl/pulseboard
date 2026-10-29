@@ -1,0 +1,16 @@
+{
+  "name": "@pulseboard/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pulseboard/shared": "workspace:*",
+    "mongodb": "^7.7.0"
+  }
+}
