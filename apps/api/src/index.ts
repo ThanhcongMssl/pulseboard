@@ -9,7 +9,7 @@ const db = await connectMongo(env.MONGO_URL);
 await ensureIndexes(db);
 const redis = new Redis(env.REDIS_URL);
 
-const server = createServer(createApp({ db, redis }));
+const server = createServer(createApp({ db, redis, webOrigin: env.WEB_ORIGIN }));
 
 // Dashboards connect here for "reports updated" pushes (wired up on Day 4).
 const wss = new WebSocketServer({ server, path: '/ws' });

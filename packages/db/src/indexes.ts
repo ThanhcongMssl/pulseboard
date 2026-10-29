@@ -26,6 +26,8 @@ export async function ensureIndexes(db: Db): Promise<void> {
     // Dashboard reads: a date range across channels, or one channel over time.
     c.reportsDaily.createIndex({ date: 1, channel: 1 }, { unique: true }),
     c.reportsDaily.createIndex({ channel: 1, date: 1 }),
+    // Freshness: the latest rebuild across all days.
+    c.reportsDaily.createIndex({ computedAt: -1 }),
 
     // One doc per job attempt; a restarted attempt overwrites its own doc.
     c.ingestRuns.createIndex({ jobId: 1, attempt: 1 }, { unique: true }),
