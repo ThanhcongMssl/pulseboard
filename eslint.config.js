@@ -18,6 +18,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: { ...globals.browser },
+    },
+  },
+  {
     // Scripts executed by mongosh inside the mongo container.
     files: ['infra/mongo/**/*.js'],
     languageOptions: {
