@@ -91,6 +91,24 @@ Data sources are simulated connectors with deterministic seed data, so no API ke
 The worker re-ingests today and yesterday every `INGEST_EVERY_MINUTES`. To watch retries and stale
 sources, set `CONNECTOR_FAILURE_RATE=0.3` in `.env`, which makes about 30% of connector fetches fail.
 
+## Dashboard
+
+Open http://localhost:3000 once a backfill has run.
+
+- **Filters**: 7, 30 or 90 days, and a single channel or all of them. They live in the URL
+  (`/?range=7&channel=email`), so any view can be linked.
+- **KPI cards**: revenue against the prorated target, ad spend, ROAS, CAC, conversion rate and
+  orders. With all channels selected, ROAS is _blended_.
+- **Charts**: daily revenue against target and spend, and daily revenue stacked by channel. The
+  channel table below holds the same numbers in text; select a row to focus that channel.
+- **Live badge**: the dashboard listens on `/ws` and refetches only when a rebuild touches a day on
+  screen. It reconnects with backoff and shows how old the data is.
+- **Stale banner**: shown when a day's numbers come from a source's last good data.
+
+The browser calls the API directly. Next.js reads `.env` from `apps/web/`, not the repo root, and
+the defaults point at `localhost:4000`. To use another API, set `NEXT_PUBLIC_API_URL` and
+`NEXT_PUBLIC_WS_URL` in `apps/web/.env.local`, and `WEB_ORIGIN` for the API's CORS.
+
 ## API
 
 Read-only, served from `reports_daily` (no aggregation at request time).

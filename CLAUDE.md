@@ -66,7 +66,11 @@ Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`. Re
   `queues.ts`, so the dashboard imports the same contract the API validates with.
 - The API's Redis subscriber is a `redis.duplicate()`: a subscribed ioredis connection can't run
   other commands. Messages read off Redis are validated before they're relayed.
-- Tests: Vitest, next to the code as `*.test.ts`. Pure logic (KPI math, aggregation, date ranges)
+- Web view logic (formatting, URL filters, chart series, live-update checks) lives in pure
+  functions in `apps/web/lib/` with tests; components in `apps/web/app/` stay thin. Colors are
+  semantic tokens in `apps/web/app/globals.css`, and channel colors are keyed by channel in
+  `apps/web/lib/channels.ts`, never by position.
+- Tests: Vitest, next to the code as `*.test.ts` (under `src/`, or `apps/web/lib/`). Pure logic (KPI math, aggregation, date ranges)
   must have tests.
 - TypeScript is pinned to 6.0.x because typescript-eslint doesn't support 7 yet. TS 6 doesn't
   auto-load `@types/*`: set `"types"` in tsconfig when needed.
