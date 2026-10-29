@@ -1,1 +1,77 @@
 @import 'tailwindcss';
+
+/*
+ * Semantic tokens. Components use these roles (bg-surface, text-muted, …),
+ * never raw colors, so dark mode is one block below. Series colors are the
+ * validated categorical palette in fixed channel order (see lib/channels.ts);
+ * dark mode uses its own dark steps, not a flip of the light ones.
+ */
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --surface-raised: #ffffff;
+  --border: rgb(11 11 11 / 0.1);
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --ink-primary: #0b0b0b;
+  --ink-secondary: #52514e;
+  --ink-muted: #898781;
+  --accent: #2a78d6;
+
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-critical: #d03b3b;
+  --warning-wash: #fff6e0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-raised: #222220;
+    --border: rgb(255 255 255 / 0.1);
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --ink-primary: #f0efec;
+    --ink-secondary: #c3c2b7;
+    --ink-muted: #898781;
+    --accent: #3987e5;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+
+    --warning-wash: #2e2610;
+  }
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-line: var(--border);
+  --color-ink: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-muted: var(--ink-muted);
+  --color-accent: var(--accent);
+  --color-good: var(--status-good);
+  --color-warning: var(--status-warning);
+  --color-critical: var(--status-critical);
+  --color-warning-wash: var(--warning-wash);
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+body {
+  background: var(--page);
+  color: var(--ink-primary);
+}

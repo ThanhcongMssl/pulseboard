@@ -1,12 +1,15 @@
-import { CHANNELS } from '@pulseboard/shared';
+import { Suspense } from 'react';
+import { Dashboard } from './dashboard/Dashboard.tsx';
+import { DashboardSkeleton } from './dashboard/DashboardSkeleton.tsx';
 
-// Placeholder until the dashboard lands on Day 5.
+// The dashboard reads its filters from the URL (useSearchParams), so it
+// renders in the browser under a Suspense boundary; the shell is static.
 export default function Home() {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">Pulseboard</h1>
-      <p className="mt-2 text-slate-600">Marketing analytics dashboard: coming soon.</p>
-      <p className="mt-6 text-sm text-slate-500">Channels: {CHANNELS.join(', ')}</p>
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <Suspense fallback={<DashboardSkeleton />}>
+        <Dashboard />
+      </Suspense>
     </main>
   );
 }
