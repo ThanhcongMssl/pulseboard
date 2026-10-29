@@ -1,8 +1,13 @@
 'use client';
 
-import { datesInRange, type ReportsResponse } from '@pulseboard/shared';
+import {
+  datesInRange,
+  type ReportsResponse,
+  type ReportsUpdatedEvent,
+  type StatusResponse,
+} from '@pulseboard/shared';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { CHANNEL_LABELS } from '../../lib/channels.ts';
 import { env } from '../../lib/env.ts';
 import {
@@ -12,15 +17,22 @@ import {
   type Filters as FilterState,
 } from '../../lib/filters.ts';
 import { formatDay } from '../../lib/format.ts';
-import { channelStack, dailySeries, targetPacing } from '../../lib/series.ts';
+import { affectsView } from '../../lib/live.ts';
+import { channelStack, dailySeries, staleDays, targetPacing } from '../../lib/series.ts';
 import { ChannelMixChart } from './ChannelMixChart.tsx';
 import { ChannelTable } from './ChannelTable.tsx';
 import { DashboardSkeleton } from './DashboardSkeleton.tsx';
 import { Filters } from './Filters.tsx';
 import { KpiCards } from './KpiCards.tsx';
+import { LiveBadge } from './LiveBadge.tsx';
 import { Panel } from './Panel.tsx';
 import { RevenueChart } from './RevenueChart.tsx';
+import { StaleBanner } from './StaleBanner.tsx';
 import { useJson } from './useJson.ts';
+import { useLive } from './useLive.ts';
+
+/** A backfill rebuilds many days in a burst; refetch once it settles. */
+const REFETCH_DEBOUNCE_MS = 500;
 
 export function Dashboard() {
   const router = useRouter();
@@ -35,6 +47,27 @@ export function Dashboard() {
     `${env.NEXT_PUBLIC_API_URL}/reports?from=${query.from}&to=${query.to}`,
   );
 
+  const status = useJson<StatusResponse>(`${env.NEXT_PUBLIC_API_URL}/status`);
+
+  const { refetch: refetchReports } = reports;
+  const { refetch: refetchStatus } = status;
+  const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(pending.current), []);
+  const refetchSoon = useCallback(
+    (includeReports: boolean) => {
+      clearTimeout(pending.current);
+      pending.current = setTimeout(() => {
+        refetchStatus();
+        if (includeReports) refetchReports();
+      }, REFETCH_DEBOUNCE_MS);
+    },
+    [refetchReports, refetchStatus],
+  );
+  const live = useLive({
+    onUpdate: (event: ReportsUpdatedEvent) => refetchSoon(affectsView(event, query)),
+    onReconnect: () => refetchSoon(true),
+  });
+
   const setFilters = (next: FilterState) =>
     router.replace(`${pathname}${filtersToSearch(next)}`, { scroll: false });
 
@@ -47,6 +80,7 @@ export function Dashboard() {
       daily: dailySeries(rows, channel, dates),
       stack: channelStack(rows, dates),
       pacing: targetPacing(rows, channel),
+      stale: staleDays(rows),
     };
   }, [reports.data, query, channel]);
 
@@ -59,6 +93,7 @@ export function Dashboard() {
             {formatDay(query.from)} – {formatDay(query.to)} · simulated data from 5 sources
           </p>
         </div>
+        <LiveBadge status={live} lastComputedAt={status.data?.lastComputedAt ?? null} />
       </header>
 
       <Filters filters={filters} onChange={setFilters} />
@@ -91,6 +126,7 @@ export function Dashboard() {
           className={`space-y-6 transition-opacity ${reports.loading ? 'opacity-60' : ''}`}
           aria-busy={reports.loading}
         >
+          <StaleBanner days={view.stale} />
           <KpiCards
             channel={channel}
             summary={reports.data?.summary[channel]}
