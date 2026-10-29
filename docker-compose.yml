@@ -2,7 +2,9 @@ name: pulseboard
 
 services:
   mongo:
-    image: mongo:8
+    # Pinned: earlier 8.x/9.x builds refuse to start on Linux kernels 6.19+
+    # (SERVER-121912), which CI runners now use; 9.0.4 has the fix.
+    image: mongo:9.0.4
     # Single-node replica set: multi-document transactions require one.
     command: ['mongod', '--replSet', 'rs0', '--bind_ip_all']
     ports:
