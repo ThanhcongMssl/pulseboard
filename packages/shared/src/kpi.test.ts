@@ -20,6 +20,10 @@ describe('cac', () => {
     expect(cac(30_000, 4)).toBe(7_500);
   });
 
+  it('rounds to whole cents', () => {
+    expect(cac(10_000, 3)).toBe(3_333);
+  });
+
   it('is null when there are no new customers', () => {
     expect(cac(30_000, 0)).toBeNull();
   });

@@ -75,6 +75,9 @@ export const reportDailySchema = z.object({
   conversionRate: z.number().nullable(),
   // Monthly target prorated to the day; null when no target row exists.
   target: z.object({ revenue: centsSchema, spend: centsSchema }).nullable(),
+  // Sources whose ingest gave up for this day: their numbers are the last good
+  // data. Repeated on every row of the day so any row can show the warning.
+  staleSources: z.array(sourceSchema),
   computedAt: z.date(),
 });
 export type ReportDaily = z.infer<typeof reportDailySchema>;

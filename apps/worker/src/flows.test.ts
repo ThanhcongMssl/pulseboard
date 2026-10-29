@@ -3,11 +3,11 @@ import { QUEUES, SOURCES } from '@pulseboard/shared';
 import { dateFlow } from './flows.ts';
 
 describe('dateFlow', () => {
-  const flow = dateFlow('2026-10-29', 42);
+  const flow = dateFlow('2026-10-29', '42');
 
   it('makes the aggregate the parent of one ingest job per source', () => {
     expect(flow.queueName).toBe(QUEUES.aggregate);
-    expect(flow.data).toEqual({ date: '2026-10-29' });
+    expect(flow.data).toEqual({ date: '2026-10-29', runId: '42' });
     expect(flow.children?.map((c) => c.data)).toEqual(
       SOURCES.map((source) => ({ source, date: '2026-10-29' })),
     );
@@ -24,6 +24,6 @@ describe('dateFlow', () => {
     const ids = [flow, ...(flow.children ?? [])].map((j) => j.opts?.jobId);
     expect(new Set(ids).size).toBe(SOURCES.length + 1);
     for (const id of ids) expect(id).not.toContain(':');
-    expect(dateFlow('2026-10-29', 43).opts?.jobId).not.toBe(flow.opts?.jobId);
+    expect(dateFlow('2026-10-29', '43').opts?.jobId).not.toBe(flow.opts?.jobId);
   });
 });

@@ -29,7 +29,7 @@ const workers = [
   // Each tick refreshes yesterday too, for data that lands late upstream.
   new Worker<ScheduleJobData>(
     QUEUES.schedule,
-    (job) => addDateFlows(flows, lastNDays(job.data.days), job.timestamp),
+    (job) => addDateFlows(flows, lastNDays(job.data.days), String(job.timestamp)),
     { connection },
   ),
 ];

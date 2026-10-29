@@ -12,6 +12,6 @@ const days = z.coerce.number().int().positive().default(env.BACKFILL_DAYS).parse
 const dates = lastNDays(days);
 
 const flows = new FlowProducer({ connection });
-await addDateFlows(flows, dates, Date.now());
+await addDateFlows(flows, dates, String(Date.now()));
 await flows.close();
 console.log(`queued ${days} days of ingest flows: ${dates[0]} to ${dates.at(-1)}`);

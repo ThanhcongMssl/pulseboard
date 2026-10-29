@@ -14,6 +14,8 @@ export interface IngestJobData {
 
 export interface AggregateJobData {
   date: IsoDate;
+  /** Identifies the flow, so the aggregate can name its ingest children. */
+  runId: string;
 }
 
 /** Repeatable trigger: start one ingest flow for each of the last `days` days. */

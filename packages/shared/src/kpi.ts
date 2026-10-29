@@ -8,8 +8,11 @@ const ratio = (numerator: number, denominator: number): number | null =>
 /** Return on ad spend: revenue / spend (unitless). */
 export const roas = (revenueCents: number, spendCents: number) => ratio(revenueCents, spendCents);
 
-/** Customer acquisition cost in cents: spend / new customers. */
-export const cac = (spendCents: number, newCustomers: number) => ratio(spendCents, newCustomers);
+/** Customer acquisition cost: spend / new customers, rounded to whole cents like all money. */
+export const cac = (spendCents: number, newCustomers: number) => {
+  const value = ratio(spendCents, newCustomers);
+  return value === null ? null : Math.round(value);
+};
 
 /** Conversion rate: orders / sessions, as a fraction (0.025 = 2.5%). */
 export const conversionRate = (orders: number, sessions: number) => ratio(orders, sessions);
