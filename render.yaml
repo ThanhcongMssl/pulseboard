@@ -1,0 +1,42 @@
+# Render Blueprint for the free hosted demo: api + worker in one free web
+# service (Render's free tier has no background workers; see the `all` stage
+# in the Dockerfile) and a free Key Value instance for BullMQ and pub/sub.
+# MongoDB is an Atlas free cluster and the dashboard runs on Vercel; their
+# URLs are entered once when the Blueprint is created (sync: false).
+
+services:
+  - type: web
+    name: pulseboard-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: MONGO_URL
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: pulseboard-redis
+          property: connectionString
+      - key: API_PORT
+        value: 10000
+      # The database starts empty: ingest 90 days of history on first boot.
+      - key: SEED_DAYS
+        value: 90
+      - key: INGEST_EVERY_MINUTES
+        value: 360
+
+  - type: keyvalue
+    name: pulseboard-redis
+    plan: free
+    region: singapore
+    # BullMQ requires noeviction, so queued jobs are never dropped.
+    maxmemoryPolicy: noeviction
+    # Private network only.
+    ipAllowList: []

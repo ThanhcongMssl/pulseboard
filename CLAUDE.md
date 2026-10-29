@@ -93,6 +93,14 @@ Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`. Re
   `maxRetriesPerRequest: null`.
 - BullMQ rejects custom job ids containing `:`; flow job ids use `-` (see `apps/worker/src/flows.ts`).
 
+## Hosted demo
+
+- Free hosting: Vercel (web), Render (`render.yaml`) and Atlas (see README "Hosted demo"). On
+  Render the api and worker share one container (`Dockerfile` stage `all`, the last stage, run
+  by `infra/start-all.mjs`), because the free tier has no background workers.
+- `SEED_DAYS` makes the worker queue history at boot only when `reports_daily` is empty. Keep
+  startup idempotent: free instances restart often and Key Value loses its data on restart.
+
 ## Commits
 
 Small, focused commits with a body explaining _why_. Don't commit `.env`, `dist/` or `.next/`.

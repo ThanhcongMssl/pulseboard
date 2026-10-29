@@ -35,6 +35,42 @@ Both setups use ports 3000 and 4000, so run one at a time. Data sources are simu
 every `INGEST_EVERY_MINUTES` (default 360). To watch retries and stale-data handling, set
 `CONNECTOR_FAILURE_RATE=0.3`, which makes about 30% of connector fetches fail.
 
+## Hosted demo
+
+The public demo runs entirely on free tiers:
+
+| Piece            | Host                                    | Notes                                                 |
+| ---------------- | --------------------------------------- | ----------------------------------------------------- |
+| Dashboard        | Vercel                                  | Static Next.js build calling the API from the browser |
+| API + worker     | Render free web service (`render.yaml`) | One container: `infra/start-all.mjs` runs both        |
+| Queues + pub/sub | Render Key Value (free)                 | In-memory, `noeviction`, private network only         |
+| Database         | MongoDB Atlas free cluster              | A replica set, so transactions work as locally        |
+
+Free hosting changes a few things, on purpose:
+
+- **Render's free tier has no background workers**, so the api and worker share a container. A small
+  supervisor starts both, forwards shutdown signals, and exits if either dies so Render restarts it.
+- **It sleeps after 15 minutes without traffic.** The first visit wakes it, which takes up to a
+  minute, and the dashboard says so while it waits. The worker sleeps too, so scheduled
+  ingests only run while the service is awake.
+- **The database starts empty**, and there's no shell to run `pnpm backfill`. With `SEED_DAYS=90`,
+  the worker queues 90 days of history at boot, but only when there are no reports yet, so a
+  restart never re-ingests the history.
+- **Key Value is in-memory**, so a restart loses queued jobs. Nothing depends on them surviving:
+  the schedule is re-created at boot, and re-ingesting a day is idempotent.
+
+### Deploy your own
+
+1. **Atlas:** create a free cluster, a database user, and allow access from `0.0.0.0/0` (Render's
+   free services have no fixed IPs). Copy the `mongodb+srv://…` connection string and **add the
+   database name** to its path: `…mongodb.net/pulseboard?retryWrites=true&w=majority`.
+2. **Render:** _New → Blueprint_, pick this repo, and enter `MONGO_URL` when prompted. For
+   `WEB_ORIGIN`, use `http://localhost:3000` for now.
+3. **Vercel:** import the repo with root directory `apps/web`. Set `NEXT_PUBLIC_API_URL` to the
+   Render URL (`https://<service>.onrender.com`) and `NEXT_PUBLIC_WS_URL` to the same host with
+   `wss://` and `/ws`.
+4. **Render again:** set `WEB_ORIGIN` to the Vercel URL so the API's CORS allows the dashboard.
+
 ## Architecture
 
 ```mermaid
