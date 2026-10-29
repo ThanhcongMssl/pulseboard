@@ -25,6 +25,8 @@ export async function ensureIndexes(db: Db): Promise<void> {
     c.reportsDaily.createIndex({ date: 1, channel: 1 }, { unique: true }),
     c.reportsDaily.createIndex({ channel: 1, date: 1 }),
 
+    // One doc per job attempt; a restarted attempt overwrites its own doc.
+    c.ingestRuns.createIndex({ jobId: 1, attempt: 1 }, { unique: true }),
     c.ingestRuns.createIndex({ source: 1, date: 1, startedAt: -1 }),
     c.ingestRuns.createIndex({ finishedAt: -1 }),
   ]);
