@@ -168,8 +168,10 @@ stays complete and shows a banner, instead of freezing because one upstream API 
 
 **Live updates through Redis pub/sub, not change streams.** The worker knows exactly which dates
 and channels it rebuilt, so it publishes that as an event. The API relays it over WebSocket, and
-the dashboard refetches only if a day on screen changed. A burst from a backfill is debounced into
-one refetch, and a reconnect triggers a refetch in case events were missed.
+the dashboard invalidates only the cached TanStack Query entries whose date range contains a rebuilt
+day. A burst from a backfill is debounced into one invalidation, and a reconnect invalidates
+everything in case events were missed. Data never goes stale on a timer, because the push is the
+freshness signal.
 
 **Numbers that add up.** Money is integer cents end to end, and days are UTC `YYYY-MM-DD` strings.
 Ratios over a range or across channels are computed from summed totals and never averaged, so

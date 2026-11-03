@@ -1,8 +1,8 @@
-import type { ReportsUpdatedEvent } from '@pulseboard/shared';
+import type { IsoDate } from '@pulseboard/shared';
 
 /** Whether a rebuild touched any day the dashboard is showing. */
 export const affectsView = (
-  event: Pick<ReportsUpdatedEvent, 'dates'>,
+  event: { dates: readonly IsoDate[] },
   { from, to }: { from: string; to: string },
 ) => event.dates.some((date) => date >= from && date <= to);
 

@@ -1,13 +1,9 @@
 'use client';
 
-import {
-  datesInRange,
-  type ReportsResponse,
-  type ReportsUpdatedEvent,
-  type StatusResponse,
-} from '@pulseboard/shared';
+import { datesInRange, type ReportsResponse, type StatusResponse } from '@pulseboard/shared';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { CHANNEL_LABELS } from '../../lib/channels.ts';
 import { env } from '../../lib/env.ts';
 import {
@@ -17,7 +13,7 @@ import {
   type Filters as FilterState,
 } from '../../lib/filters.ts';
 import { formatDay } from '../../lib/format.ts';
-import { affectsView } from '../../lib/live.ts';
+import { getJson, queryKeys } from '../../lib/queries.ts';
 import { channelStack, dailySeries, staleDays, targetPacing } from '../../lib/series.ts';
 import { ChannelMixChart } from './ChannelMixChart.tsx';
 import { ChannelTable } from './ChannelTable.tsx';
@@ -28,11 +24,7 @@ import { LiveBadge } from './LiveBadge.tsx';
 import { Panel } from './Panel.tsx';
 import { RevenueChart } from './RevenueChart.tsx';
 import { StaleBanner } from './StaleBanner.tsx';
-import { useJson } from './useJson.ts';
-import { useLive } from './useLive.ts';
-
-/** A backfill rebuilds many days in a burst; refetch once it settles. */
-const REFETCH_DEBOUNCE_MS = 500;
+import { useLiveQueries } from './useLiveQueries.ts';
 
 export function Dashboard() {
   const router = useRouter();
@@ -43,30 +35,18 @@ export function Dashboard() {
   // Always every channel: the table and mix chart need them all, and switching
   // channel is then instant instead of a refetch.
   const query = useMemo(() => toQuery({ range, channel: 'all' }), [range]);
-  const reports = useJson<ReportsResponse>(
-    `${env.NEXT_PUBLIC_API_URL}/reports?from=${query.from}&to=${query.to}`,
-  );
-
-  const status = useJson<StatusResponse>(`${env.NEXT_PUBLIC_API_URL}/status`);
-
-  const { refetch: refetchReports } = reports;
-  const { refetch: refetchStatus } = status;
-  const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(pending.current), []);
-  const refetchSoon = useCallback(
-    (includeReports: boolean) => {
-      clearTimeout(pending.current);
-      pending.current = setTimeout(() => {
-        refetchStatus();
-        if (includeReports) refetchReports();
-      }, REFETCH_DEBOUNCE_MS);
-    },
-    [refetchReports, refetchStatus],
-  );
-  const live = useLive({
-    onUpdate: (event: ReportsUpdatedEvent) => refetchSoon(affectsView(event, query)),
-    onReconnect: () => refetchSoon(true),
+  const reports = useQuery({
+    queryKey: queryKeys.reports(query),
+    queryFn: ({ signal }) =>
+      getJson<ReportsResponse>(`/reports?from=${query.from}&to=${query.to}`, signal),
+    // Keep the previous range on screen (dimmed) while the next one loads.
+    placeholderData: keepPreviousData,
   });
+  const status = useQuery({
+    queryKey: queryKeys.status(),
+    queryFn: ({ signal }) => getJson<StatusResponse>('/status', signal),
+  });
+  const live = useLiveQueries();
 
   const setFilters = (next: FilterState) =>
     router.replace(`${pathname}${filtersToSearch(next)}`, { scroll: false });
@@ -98,15 +78,15 @@ export function Dashboard() {
 
       <Filters filters={filters} onChange={setFilters} />
 
-      {reports.error && !reports.data ? (
+      {reports.isError && !reports.data ? (
         <div role="alert" className="rounded-xl border border-line bg-raised p-6">
           <p className="font-medium">Couldn’t load reports</p>
           <p className="mt-1 text-sm text-muted">
-            {reports.error}. Is the API running on {env.NEXT_PUBLIC_API_URL}?
+            {reports.error.message}. Is the API running on {env.NEXT_PUBLIC_API_URL}?
           </p>
           <button
             type="button"
-            onClick={reports.refetch}
+            onClick={() => void reports.refetch()}
             className="mt-4 rounded-lg bg-ink px-3 py-1.5 text-sm text-page"
           >
             Retry
@@ -123,8 +103,8 @@ export function Dashboard() {
         </div>
       ) : (
         <div
-          className={`space-y-6 transition-opacity ${reports.loading ? 'opacity-60' : ''}`}
-          aria-busy={reports.loading}
+          className={`space-y-6 transition-opacity ${reports.isFetching ? 'opacity-60' : ''}`}
+          aria-busy={reports.isFetching}
         >
           <StaleBanner days={view.stale} />
           <KpiCards
