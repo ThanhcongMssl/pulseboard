@@ -24,6 +24,7 @@ import { LiveBadge } from './LiveBadge.tsx';
 import { Panel } from './Panel.tsx';
 import { RevenueChart } from './RevenueChart.tsx';
 import { StaleBanner } from './StaleBanner.tsx';
+import { ThemeToggle } from './ThemeToggle.tsx';
 import { useLiveQueries } from './useLiveQueries.ts';
 
 export function Dashboard() {
@@ -73,7 +74,10 @@ export function Dashboard() {
             {formatDay(query.from)} – {formatDay(query.to)} · simulated data from 5 sources
           </p>
         </div>
-        <LiveBadge status={live} lastComputedAt={status.data?.lastComputedAt ?? null} />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <LiveBadge status={live} lastComputedAt={status.data?.lastComputedAt ?? null} />
+        </div>
       </header>
 
       <Filters filters={filters} onChange={setFilters} />
