@@ -253,7 +253,8 @@ function ChannelsWidget() {
 function CampaignsWidget() {
   const { filters, range, setFilters } = useDashboard();
   const unpaid = filters.channel !== 'all' && !PAID.has(filters.channel);
-  const campaigns = useCampaigns(range, asChannel(filters.channel));
+  // An unpaid channel has no campaigns: there's nothing to ask the API.
+  const campaigns = useCampaigns(range, asChannel(filters.channel), !unpaid);
   return (
     <Panel
       title="Campaigns"

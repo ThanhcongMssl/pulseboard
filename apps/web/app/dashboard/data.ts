@@ -38,9 +38,10 @@ const params = (range: DateRange, extra: Record<string, string | null>) => {
   return p.toString();
 };
 
-export const useCampaigns = (range: DateRange, channel: Channel | null) =>
+export const useCampaigns = (range: DateRange, channel: Channel | null, enabled = true) =>
   useQuery({
     queryKey: queryKeys.campaigns(range, channel),
+    enabled,
     queryFn: ({ signal }) =>
       getJson<CampaignsResponse>(`/campaigns?${params(range, { channel })}`, signal),
     placeholderData: keepPreviousData,
