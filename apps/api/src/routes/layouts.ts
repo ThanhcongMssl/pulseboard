@@ -30,7 +30,8 @@ export function layoutsRouter(db: Db) {
     }
     const doc = await dashboardLayouts.findOne({ _id: clientId.data });
     if (!doc) {
-      res.status(404).json({ error: 'not_found' });
+      // Nothing saved yet is the normal first visit, not an error: no content.
+      res.status(204).end();
       return;
     }
     res.set('Cache-Control', 'no-store').json(toResponse(doc));

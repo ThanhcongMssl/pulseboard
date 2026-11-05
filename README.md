@@ -225,7 +225,7 @@ only write.
 | `GET /reports?from&to&channel`                                 | Daily rows sorted by date, plus a range `summary` per channel. Defaults to the last 30 days and every channel; ranges are capped at 366 days. |
 | `GET /campaigns?from&to&channel`                               | Range totals per ad campaign (spend, delivery, attributed orders and revenue, ROAS, CAC, CTR), largest spend first.                           |
 | `GET /orders?from&to&channel&campaignId&sort&dir&limit&cursor` | One page of orders sorted by `date` or `revenue`, with `nextCursor` for the next page and the matching `total` on the first page.             |
-| `GET /layouts/:clientId`, `PUT /layouts/:clientId`             | A viewer's saved dashboard layout, keyed by an anonymous client id (a UUID); the last write wins.                                             |
+| `GET /layouts/:clientId`, `PUT /layouts/:clientId`             | A viewer's saved dashboard layout (`204` before the first save), keyed by an anonymous client id (a UUID); the last write wins.               |
 | `GET /status`                                                  | `lastComputedAt` and the last finished ingest attempt of each source, for a "last updated" badge.                                             |
 | `GET /health`                                                  | Mongo and Redis reachability (`200` or `503`).                                                                                                |
 | `WS /ws`                                                       | `{"type":"hello"}` on connect, then `{"type":"reports.updated","dates":[…],"channels":[…],"computedAt":…}` after every rebuild.               |

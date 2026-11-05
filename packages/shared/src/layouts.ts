@@ -61,7 +61,7 @@ export interface DashboardLayoutDoc extends DashboardLayout {
   updatedAt: Date;
 }
 
-/** GET and PUT /layouts/:clientId response. */
+/** GET (204 when nothing is saved yet) and PUT /layouts/:clientId response. */
 export interface LayoutResponse extends DashboardLayout {
   updatedAt: string;
 }
