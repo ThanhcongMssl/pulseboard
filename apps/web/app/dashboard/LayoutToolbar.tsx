@@ -28,7 +28,7 @@ const isMac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(n
 function SaveStatus({ state, onRetry }: { state: SaveState; onRetry(): void }) {
   if (state === 'error')
     return (
-      <span role="status" className="text-sm text-critical">
+      <span role="status" className="text-right text-sm text-critical">
         Couldn’t save.{' '}
         <button type="button" onClick={onRetry} className="underline">
           Retry
@@ -37,7 +37,7 @@ function SaveStatus({ state, onRetry }: { state: SaveState; onRetry(): void }) {
     );
   const text = { saved: 'Saved', unsaved: 'Unsaved changes', saving: 'Saving…' }[state];
   return (
-    <span role="status" className="text-sm text-muted">
+    <span role="status" className="text-right text-sm text-muted">
       {text}
     </span>
   );
@@ -48,15 +48,10 @@ export function LayoutToolbar(props: Props) {
   const placed = new Set(props.items.map((i) => i.kind));
   const mod = isMac() ? '⌘' : 'Ctrl+';
   return (
+    // The group hugs the right edge, so anything that changes width (the save
+    // status, the edit-only buttons) sits on the left and the rest stay put.
     <div className="hidden flex-wrap items-center gap-2 md:flex">
-      <button
-        type="button"
-        aria-pressed={props.editing}
-        onClick={props.onToggleEditing}
-        className={`${button} aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-page`}
-      >
-        {props.editing ? 'Done' : 'Edit layout'}
-      </button>
+      <SaveStatus state={props.saveState} onRetry={props.onRetrySave} />
       {props.editing && (
         <>
           <button type="button" popoverTarget={LIBRARY_ID} className={button}>
@@ -90,7 +85,14 @@ export function LayoutToolbar(props: Props) {
           </button>
         </>
       )}
-      <SaveStatus state={props.saveState} onRetry={props.onRetrySave} />
+      <button
+        type="button"
+        aria-pressed={props.editing}
+        onClick={props.onToggleEditing}
+        className={`${button} min-w-26 justify-center aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-page`}
+      >
+        {props.editing ? 'Done' : 'Edit layout'}
+      </button>
 
       <div
         id={LIBRARY_ID}
