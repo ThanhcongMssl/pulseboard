@@ -1,57 +1,17 @@
 'use client';
 
-import { useLayoutEffect, useState } from 'react';
-import {
-  nextTheme,
-  parseTheme,
-  THEME_STORAGE_KEY,
-  themeAttribute,
-  type Theme,
-} from '../../lib/theme.ts';
+import { nextTheme, type Theme } from '../../lib/theme.ts';
+import { toggleTheme, useTheme } from '../useTheme.ts';
 
 const LABELS: Record<Theme, string> = { light: 'Light', dark: 'Dark' };
 
-function readStored(): Theme {
-  try {
-    return parseTheme(localStorage.getItem(THEME_STORAGE_KEY));
-  } catch {
-    return 'light';
-  }
-}
-
-function apply(theme: Theme) {
-  const attr = themeAttribute(theme);
-  if (attr) document.documentElement.setAttribute('data-theme', attr);
-  else document.documentElement.removeAttribute('data-theme');
-}
-
 /** Switches between light and dark. The head script in layout.tsx applies dark before paint. */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>('light');
-
-  // Sync with the stored choice; this also re-applies the attribute after
-  // React's dev-mode remount clears what the head script set on <html>.
-  useLayoutEffect(() => {
-    const stored = readStored();
-    setTheme(stored);
-    apply(stored);
-  }, []);
-
-  const cycle = () => {
-    const next = nextTheme(theme);
-    setTheme(next);
-    apply(next);
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, next);
-    } catch {
-      // Storage blocked: the choice lasts for this page view only.
-    }
-  };
-
+  const theme = useTheme();
   return (
     <button
       type="button"
-      onClick={cycle}
+      onClick={toggleTheme}
       aria-label={`Theme: ${LABELS[theme]}. Switch to ${LABELS[nextTheme(theme)]}`}
       className="inline-flex items-center gap-1.5 rounded-full border border-line bg-raised px-3 py-1 text-sm text-ink-secondary hover:bg-line"
     >
