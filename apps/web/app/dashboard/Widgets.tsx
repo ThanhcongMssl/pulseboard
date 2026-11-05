@@ -3,6 +3,7 @@
 import type { Channel, ReportChannel, WidgetKind } from '@pulseboard/shared';
 import { useContext, useMemo, type ReactNode } from 'react';
 import { CHANNEL_LABELS } from '../../lib/channels.ts';
+import { toggleChannel } from '../../lib/filters.ts';
 import { isKpi, kpiTile, type KpiKind } from '../../lib/kpis.ts';
 import { channelStack, dailySeries, targetPacing } from '../../lib/series.ts';
 import { WIDGETS } from '../../lib/widgets.ts';
@@ -91,7 +92,7 @@ function ChannelsWidget() {
       <ChannelTable
         summary={data?.summary ?? {}}
         selected={filters.channel}
-        onSelect={(channel) => setFilters({ ...filters, channel })}
+        onSelect={(channel) => setFilters(toggleChannel(filters, channel))}
       />
     </Panel>
   );
@@ -123,7 +124,7 @@ function CampaignsWidget() {
 
 function OrdersWidget() {
   const { filters, range } = useDashboard();
-  const orders = useLatestOrders(range, asChannel(filters.channel));
+  const orders = useLatestOrders(range, asChannel(filters.channel), filters.campaign);
   // Names for the campaign column; shared with the campaigns widget when it shows every channel.
   const campaigns = useCampaigns(range, null);
   const names = useMemo(

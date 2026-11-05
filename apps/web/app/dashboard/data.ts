@@ -43,13 +43,18 @@ export const useCampaigns = (range: DateRange, channel: Channel | null) =>
     placeholderData: keepPreviousData,
   });
 
-/** The newest orders in the range: the first page only, newest first. */
-export const useLatestOrders = (range: DateRange, channel: Channel | null, limit = 50) =>
+/** The newest orders in the range, of a channel or campaign: the first page only. */
+export const useLatestOrders = (
+  range: DateRange,
+  channel: Channel | null,
+  campaign: string | null,
+  limit = 50,
+) =>
   useQuery({
-    queryKey: queryKeys.orders(range, channel),
+    queryKey: queryKeys.orders(range, channel, campaign),
     queryFn: ({ signal }) =>
       getJson<OrdersResponse>(
-        `/orders?${params(range, { channel, limit: String(limit) })}`,
+        `/orders?${params(range, { channel, campaignId: campaign, limit: String(limit) })}`,
         signal,
       ),
     placeholderData: keepPreviousData,

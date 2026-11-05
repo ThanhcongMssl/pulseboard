@@ -16,7 +16,7 @@ describe('isAffected', () => {
   it('treats campaigns and orders like reports', () => {
     const range = { from: '2026-10-01', to: '2026-10-31' };
     expect(isAffected(queryKeys.campaigns(range, null), ['2026-10-15'])).toBe(true);
-    expect(isAffected(queryKeys.orders(range, 'email'), ['2026-11-15'])).toBe(false);
+    expect(isAffected(queryKeys.orders(range, 'email', null), ['2026-11-15'])).toBe(false);
   });
 
   it('always refetches status', () => {
@@ -38,7 +38,7 @@ describe('isPipelineQuery', () => {
       [
         queryKeys.reports(range),
         queryKeys.campaigns(range, null),
-        queryKeys.orders(range, null),
+        queryKeys.orders(range, null, null),
         queryKeys.status(),
         queryKeys.layout('7d444840-9dc0-4a8e-8f3f-0c3c0a9a7b1e'),
       ].map(isPipelineQuery),

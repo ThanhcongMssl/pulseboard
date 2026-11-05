@@ -15,8 +15,8 @@ export const queryKeys = {
   reports: ({ from, to }: DateRange) => ['reports', from, to] as const,
   campaigns: ({ from, to }: DateRange, channel: Channel | null) =>
     ['campaigns', from, to, channel] as const,
-  orders: ({ from, to }: DateRange, channel: Channel | null) =>
-    ['orders', from, to, channel] as const,
+  orders: ({ from, to }: DateRange, channel: Channel | null, campaign: string | null) =>
+    ['orders', from, to, channel, campaign] as const,
   status: () => ['status'] as const,
   layout: (clientId: string) => ['layout', clientId] as const,
 };

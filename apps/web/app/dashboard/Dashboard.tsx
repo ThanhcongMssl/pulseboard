@@ -45,7 +45,7 @@ export function Dashboard() {
       range,
       dates,
       setFilters: (next: FilterState) =>
-        router.replace(`${pathname}${filtersToSearch(next)}`, { scroll: false }),
+        router.push(`${pathname}${filtersToSearch(next)}`, { scroll: false }),
     }),
     [filters, range, dates, router, pathname],
   );
