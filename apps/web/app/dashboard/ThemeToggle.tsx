@@ -9,13 +9,13 @@ import {
   type Theme,
 } from '../../lib/theme.ts';
 
-const LABELS: Record<Theme, string> = { system: 'System', light: 'Light', dark: 'Dark' };
+const LABELS: Record<Theme, string> = { light: 'Light', dark: 'Dark' };
 
 function readStored(): Theme {
   try {
     return parseTheme(localStorage.getItem(THEME_STORAGE_KEY));
   } catch {
-    return 'system';
+    return 'light';
   }
 }
 
@@ -25,9 +25,9 @@ function apply(theme: Theme) {
   else document.documentElement.removeAttribute('data-theme');
 }
 
-/** Cycles system → light → dark. The head script in layout.tsx applies it before paint. */
+/** Switches between light and dark. The head script in layout.tsx applies dark before paint. */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>('system');
+  const [theme, setTheme] = useState<Theme>('light');
 
   // Sync with the stored choice; this also re-applies the attribute after
   // React's dev-mode remount clears what the head script set on <html>.
@@ -73,13 +73,6 @@ function ThemeIcon({ theme }: { theme: Theme }) {
     strokeLinejoin: 'round' as const,
     'aria-hidden': true,
   };
-  if (theme === 'light')
-    return (
-      <svg {...common}>
-        <circle cx="12" cy="12" r="4" />
-        <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-      </svg>
-    );
   if (theme === 'dark')
     return (
       <svg {...common}>
@@ -88,8 +81,8 @@ function ThemeIcon({ theme }: { theme: Theme }) {
     );
   return (
     <svg {...common}>
-      <rect x="3" y="4" width="18" height="12" rx="2" />
-      <path d="M8 20h8M12 16v4" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
     </svg>
   );
 }
