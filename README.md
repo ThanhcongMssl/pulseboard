@@ -159,8 +159,8 @@ Re-running a day, by retry, schedule or backfill, overwrites rows and never doub
 
 **Snapshot reads, transactional writes.** The aggregate reads a day's raw data in a snapshot
 session, so a late retry landing mid-read can't skew the sums. It then replaces the day's six
-report documents in one transaction, so a dashboard never sees new channel rows next to an old
-totals row. Transactions are why MongoDB runs as a (single-node) replica set.
+report documents and its campaign documents in one transaction, so a dashboard never sees new
+channel rows next to an old totals row, or campaigns that disagree with their channel. Transactions are why MongoDB runs as a (single-node) replica set.
 
 **Stale beats blocked.** If a source still fails after its retries, the flow lets the aggregate run
 anyway on that source's last good data, and the report records it in `staleSources`. The dashboard
@@ -216,23 +216,36 @@ the defaults point at `localhost:4000`. To use another API, set `NEXT_PUBLIC_API
 
 ## API
 
-Read-only, served from `reports_daily` (no aggregation at request time).
+Reports come from precomputed read models (`reports_daily`, `reports_campaign_daily`), so no
+request aggregates raw data. The order list reads `raw_orders` directly, and layouts are the API's
+only write.
 
-| Endpoint                       | Returns                                                                                                                                       |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /reports?from&to&channel` | Daily rows sorted by date, plus a range `summary` per channel. Defaults to the last 30 days and every channel; ranges are capped at 366 days. |
-| `GET /status`                  | `lastComputedAt` and the last finished ingest attempt of each source, for a "last updated" badge.                                             |
-| `GET /health`                  | Mongo and Redis reachability (`200` or `503`).                                                                                                |
-| `WS /ws`                       | `{"type":"hello"}` on connect, then `{"type":"reports.updated","dates":[…],"channels":[…],"computedAt":…}` after every rebuild.               |
+| Endpoint                                                       | Returns                                                                                                                                       |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /reports?from&to&channel`                                 | Daily rows sorted by date, plus a range `summary` per channel. Defaults to the last 30 days and every channel; ranges are capped at 366 days. |
+| `GET /campaigns?from&to&channel`                               | Range totals per ad campaign (spend, delivery, attributed orders and revenue, ROAS, CAC, CTR), largest spend first.                           |
+| `GET /orders?from&to&channel&campaignId&sort&dir&limit&cursor` | One page of orders sorted by `date` or `revenue`, with `nextCursor` for the next page and the matching `total` on the first page.             |
+| `GET /layouts/:clientId`, `PUT /layouts/:clientId`             | A viewer's saved dashboard layout, keyed by an anonymous client id (a UUID); the last write wins.                                             |
+| `GET /status`                                                  | `lastComputedAt` and the last finished ingest attempt of each source, for a "last updated" badge.                                             |
+| `GET /health`                                                  | Mongo and Redis reachability (`200` or `503`).                                                                                                |
+| `WS /ws`                                                       | `{"type":"hello"}` on connect, then `{"type":"reports.updated","dates":[…],"channels":[…],"computedAt":…}` after every rebuild.               |
 
 ```sh
 curl 'localhost:4000/reports?from=2026-10-01&to=2026-10-29&channel=paid_social'
+curl 'localhost:4000/campaigns?channel=paid_search'
+curl 'localhost:4000/orders?sort=revenue&limit=50'
 curl localhost:4000/status
 ```
 
 Invalid queries get `400 {"error":"invalid_query","issues":{…}}`. Range ratios in `summary` are
 computed from the range's totals, not averaged across days. The `all` row's ROAS is _blended_: all
-revenue over paid spend.
+revenue over paid spend. CAC is null for channels without ad spend.
+
+**Orders are keyset-paginated.** A cursor encodes the last row's sort value and `_id`, and the next
+page continues strictly after it, walking an index in either direction. A page costs the same at
+row 100,000 as at row 0, and orders ingested between requests can't shift pages into duplicates or
+gaps. Walking all 530 pages of ~106k orders returns each order exactly once, in order, at about
+5 ms a page.
 
 ## Connectors
 
@@ -253,7 +266,7 @@ Connector output is validated with zod before it's written.
 ## Project layout
 
 ```
-apps/api            Express REST + WebSocket relay (read-only over reports_daily)
+apps/api            Express REST + WebSocket relay (reads read models and orders; writes layouts)
 apps/worker         BullMQ: schedule, ingest flows, aggregate job, backfill script
 apps/web            Next.js dashboard
 packages/shared     Domain types, zod schemas, KPI math, API and event contracts (no I/O)

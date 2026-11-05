@@ -8,7 +8,7 @@ code and commit history are read by reviewers: keep both clean and explainable.
 ## Layout
 
 ```
-apps/api         Express 5 REST + ws WebSocket (/ws). Read-only over reports_daily.
+apps/api         Express 5 REST + ws WebSocket (/ws). Reads; its only write is dashboard_layouts.
 apps/worker      BullMQ consumers: ingest jobs per source, then the aggregate job.
 apps/web         Next.js 16 (App Router) + Tailwind 4 + Recharts dashboard.
 packages/shared  Domain types + zod schemas, KPI math, queue names, event types. No I/O.
@@ -56,7 +56,14 @@ Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`. Re
   the pure `buildDailyReports` in `apps/worker/src/reports.ts`); the API only reads it.
 - The `all` row's ratios come from its totals, never from averaging channel ratios. `staleSources`
   on every row lists sources whose ingest gave up for that day (their data is the last good copy).
-- KPI ratios come from `packages/shared/src/kpi.ts` and are `null` on a zero denominator. Ratios
+- **reports_campaign_daily** is the campaign read model: one doc per `(date, campaignId)`, built by
+  the pure `buildCampaignReports` and written in the same transaction as the day's reports_daily
+  (the day's campaigns are deleted and reinserted). Paid orders carry the `campaignId` credited
+  with them; unpaid ones `null`. The API reads both read models, plus `raw_orders` (read-only, for
+  the keyset-paginated `/orders`); its only write is `dashboard_layouts`, keyed by an anonymous
+  client UUID.
+- KPI ratios come from `packages/shared/src/kpi.ts` and are `null` on a zero denominator. CAC is
+  also `null` without spend. Ratios
   over a date range come from `summarizeReports` (sum first, then divide), never from averaging.
 - New collection or query pattern → add the index to `ensureIndexes()` in the same change.
 
