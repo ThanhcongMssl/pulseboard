@@ -1,6 +1,6 @@
 'use client';
 
-import { CHANNELS } from '@pulseboard/shared';
+import { CHANNELS, type ReportChannel } from '@pulseboard/shared';
 import {
   Bar,
   BarChart,
@@ -16,10 +16,19 @@ import { formatCents, formatDay } from '../../lib/format.ts';
 import type { StackPoint } from '../../lib/series.ts';
 import { axisProps, ChartTooltip } from './ChartTooltip.tsx';
 
-/** Daily revenue stacked by channel, in the fixed channel order. */
-export function ChannelMixChart({ points }: { points: StackPoint[] }) {
+/**
+ * Daily revenue stacked by channel, in the fixed channel order. With one
+ * channel selected, the others fade so it stands out against the total.
+ */
+export function ChannelMixChart({
+  points,
+  selected,
+}: {
+  points: StackPoint[];
+  selected: ReportChannel;
+}) {
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart
         data={points}
         margin={{ top: 8, right: 16, bottom: 0, left: 0 }}
@@ -41,6 +50,7 @@ export function ChannelMixChart({ points }: { points: StackPoint[] }) {
             name={CHANNEL_LABELS[channel]}
             stackId="revenue"
             fill={CHANNEL_COLORS[channel]}
+            fillOpacity={selected === 'all' || selected === channel ? 1 : 0.25}
             // A surface-colored stroke leaves a hairline gap between segments.
             stroke="var(--surface-raised)"
             strokeWidth={1}

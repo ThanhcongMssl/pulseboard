@@ -1,10 +1,8 @@
 'use client';
 
-import { datesInRange, type ReportsResponse, type StatusResponse } from '@pulseboard/shared';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { datesInRange } from '@pulseboard/shared';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useMemo } from 'react';
-import { CHANNEL_LABELS } from '../../lib/channels.ts';
+import { useMemo, useState } from 'react';
 import { env } from '../../lib/env.ts';
 import {
   filtersToSearch,
@@ -13,131 +11,124 @@ import {
   type Filters as FilterState,
 } from '../../lib/filters.ts';
 import { formatDay } from '../../lib/format.ts';
-import { getJson, queryKeys } from '../../lib/queries.ts';
-import { channelStack, dailySeries, staleDays, targetPacing } from '../../lib/series.ts';
-import { ChannelMixChart } from './ChannelMixChart.tsx';
-import { ChannelTable } from './ChannelTable.tsx';
+import { staleDays } from '../../lib/series.ts';
+import { addWidget } from '../../lib/widgets.ts';
+import { DashboardProvider, type DashboardState } from './DashboardContext.tsx';
 import { DashboardSkeleton } from './DashboardSkeleton.tsx';
+import { useReports, useStatus } from './data.ts';
 import { Filters } from './Filters.tsx';
-import { KpiCards } from './KpiCards.tsx';
+import { LayoutToolbar } from './LayoutToolbar.tsx';
 import { LiveBadge } from './LiveBadge.tsx';
-import { Panel } from './Panel.tsx';
-import { RevenueChart } from './RevenueChart.tsx';
 import { StaleBanner } from './StaleBanner.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
 import { useLiveQueries } from './useLiveQueries.ts';
+import { useSavedLayout } from './useSavedLayout.ts';
+import { WidgetGrid } from './WidgetGrid.tsx';
 
 export function Dashboard() {
   const router = useRouter();
   const pathname = usePathname();
-  const filters = parseFilters(useSearchParams());
-  const { range, channel } = filters;
+  const searchParams = useSearchParams();
+  const filters = useMemo(() => parseFilters(searchParams), [searchParams]);
 
-  // Always every channel: the table and mix chart need them all, and switching
-  // channel is then instant instead of a refetch.
-  const query = useMemo(() => toQuery({ range, channel: 'all' }), [range]);
-  const reports = useQuery({
-    queryKey: queryKeys.reports(query),
-    queryFn: ({ signal }) =>
-      getJson<ReportsResponse>(`/reports?from=${query.from}&to=${query.to}`, signal),
-    // Keep the previous range on screen (dimmed) while the next one loads.
-    placeholderData: keepPreviousData,
-  });
-  const status = useQuery({
-    queryKey: queryKeys.status(),
-    queryFn: ({ signal }) => getJson<StatusResponse>('/status', signal),
-  });
+  const range = useMemo(() => toQuery(filters), [filters]);
+  const dates = useMemo(() => datesInRange(range), [range]);
+  const reports = useReports(range);
+  const status = useStatus();
   const live = useLiveQueries();
+  const layout = useSavedLayout();
+  const [editing, setEditing] = useState(false);
 
-  const setFilters = (next: FilterState) =>
-    router.replace(`${pathname}${filtersToSearch(next)}`, { scroll: false });
-
-  const view = useMemo(() => {
-    if (!reports.data) return null;
-    const rows = reports.data.reports;
-    const dates = datesInRange(query);
-    return {
-      rows,
-      daily: dailySeries(rows, channel, dates),
-      stack: channelStack(rows, dates),
-      pacing: targetPacing(rows, channel),
-      stale: staleDays(rows),
-    };
-  }, [reports.data, query, channel]);
+  const state = useMemo<DashboardState>(
+    () => ({
+      filters,
+      range,
+      dates,
+      setFilters: (next: FilterState) =>
+        router.replace(`${pathname}${filtersToSearch(next)}`, { scroll: false }),
+    }),
+    [filters, range, dates, router, pathname],
+  );
+  const stale = useMemo(() => staleDays(reports.data?.reports ?? []), [reports.data]);
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pulseboard</h1>
-          <p className="text-sm text-muted">
-            {formatDay(query.from)} – {formatDay(query.to)} · simulated data from 5 sources
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <LiveBadge status={live} lastComputedAt={status.data?.lastComputedAt ?? null} />
-        </div>
-      </header>
+    <DashboardProvider value={state}>
+      <div className="space-y-6">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Pulseboard</h1>
+            <p className="text-sm text-muted">
+              {formatDay(range.from)} – {formatDay(range.to)} · simulated data from 5 sources
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LiveBadge status={live} lastComputedAt={status.data?.lastComputedAt ?? null} />
+          </div>
+        </header>
 
-      <Filters filters={filters} onChange={setFilters} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Filters filters={filters} onChange={state.setFilters} />
+          {layout.items && (
+            <LayoutToolbar
+              items={layout.items}
+              editing={editing}
+              onToggleEditing={() => setEditing((e) => !e)}
+              onAdd={(kind) => layout.commit(addWidget(layout.items!, kind))}
+              canUndo={layout.canUndo}
+              canRedo={layout.canRedo}
+              onUndo={layout.undo}
+              onRedo={layout.redo}
+              isDefault={layout.isDefault}
+              onReset={layout.reset}
+              saveState={layout.saveState}
+              onRetrySave={layout.retrySave}
+            />
+          )}
+        </div>
 
-      {reports.isError && !reports.data ? (
-        <div role="alert" className="rounded-xl border border-line bg-raised p-6">
-          <p className="font-medium">Couldn’t load reports</p>
-          <p className="mt-1 text-sm text-muted">
-            {reports.error.message}. Is the API running on {env.NEXT_PUBLIC_API_URL}?
-          </p>
-          <button
-            type="button"
-            onClick={() => void reports.refetch()}
-            className="mt-4 rounded-lg bg-ink px-3 py-1.5 text-sm text-page"
-          >
-            Retry
-          </button>
-        </div>
-      ) : !view ? (
-        <DashboardSkeleton />
-      ) : view.rows.length === 0 ? (
-        <div className="rounded-xl border border-line bg-raised p-6">
-          <p className="font-medium">No reports in this range yet</p>
-          <p className="mt-1 text-sm text-muted">
-            Start the worker and run <code className="rounded bg-line px-1">pnpm backfill</code>.
-          </p>
-        </div>
-      ) : (
-        <div
-          className={`space-y-6 transition-opacity ${reports.isFetching ? 'opacity-60' : ''}`}
-          aria-busy={reports.isFetching}
-        >
-          <StaleBanner days={view.stale} />
-          <KpiCards
-            channel={channel}
-            summary={reports.data?.summary[channel]}
-            pacing={view.pacing}
-          />
-          <div className={`grid gap-6 ${channel === 'all' ? 'lg:grid-cols-2' : ''}`}>
-            <Panel
-              title={`Revenue vs. target · ${CHANNEL_LABELS[channel]}`}
-              subtitle="Daily, with ad spend for comparison"
+        {reports.isError && !reports.data ? (
+          <div role="alert" className="rounded-xl border border-line bg-raised p-6">
+            <p className="font-medium">Couldn’t load reports</p>
+            <p className="mt-1 text-sm text-muted">
+              {reports.error.message}. Is the API running on {env.NEXT_PUBLIC_API_URL}?
+            </p>
+            <button
+              type="button"
+              onClick={() => void reports.refetch()}
+              className="mt-4 rounded-lg bg-ink px-3 py-1.5 text-sm text-page"
             >
-              <RevenueChart points={view.daily} channel={channel} />
-            </Panel>
-            {channel === 'all' && (
-              <Panel title="Revenue by channel" subtitle="Daily, stacked">
-                <ChannelMixChart points={view.stack} />
-              </Panel>
+              Retry
+            </button>
+          </div>
+        ) : !reports.data || !layout.items ? (
+          <DashboardSkeleton />
+        ) : reports.data.reports.length === 0 ? (
+          <div className="rounded-xl border border-line bg-raised p-6">
+            <p className="font-medium">No reports in this range yet</p>
+            <p className="mt-1 text-sm text-muted">
+              Start the worker and run <code className="rounded bg-line px-1">pnpm backfill</code>.
+            </p>
+          </div>
+        ) : (
+          <div
+            className={`space-y-6 transition-opacity ${reports.isFetching ? 'opacity-60' : ''}`}
+            aria-busy={reports.isFetching}
+          >
+            <StaleBanner days={stale} />
+            {layout.items.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-line p-10 text-center">
+                <p className="font-medium">This dashboard is empty</p>
+                <p className="mt-1 text-sm text-muted">
+                  Add a widget from the library, or reset to the default layout.
+                </p>
+              </div>
+            ) : (
+              <WidgetGrid items={layout.items} editing={editing} onCommit={layout.commit} />
             )}
           </div>
-          <Panel title="Channels" subtitle="Totals for the range; select a row to focus it">
-            <ChannelTable
-              summary={reports.data?.summary ?? {}}
-              selected={channel}
-              onSelect={(next) => setFilters({ ...filters, channel: next })}
-            />
-          </Panel>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </DashboardProvider>
   );
 }

@@ -202,12 +202,19 @@ Open http://localhost:3000 once a backfill has run.
 
 - **Filters**: 7, 30 or 90 days, and a single channel or all of them. They live in the URL
   (`/?range=7&channel=email`), so any view can be linked.
-- **KPI cards**: revenue against the prorated target, ad spend, ROAS, CAC, conversion rate and
-  orders. With all channels selected, ROAS is _blended_.
-- **Charts**: daily revenue against target and spend, and daily revenue stacked by channel. The
-  channel table below holds the same numbers in text; select a row to focus that channel.
-- **Live badge**: the dashboard listens on `/ws` and refetches only when a rebuild touches a day on
-  screen. It reconnects with backoff and shows how old the data is.
+- **Widgets**: KPI tiles (revenue against the prorated target, ad spend, ROAS, CAC, conversion
+  rate, orders; with all channels selected, ROAS is _blended_), daily revenue against target and
+  spend, daily revenue stacked by channel, and tables of channels, campaigns and the latest orders.
+  Select a channel row to focus the whole dashboard on it.
+- **Layout builder**: _Edit layout_ lets you drag widgets by their header, resize them from the
+  corner, remove them, and add more from the widget library. Every change is a snapshot in an
+  undo history (⌘Z / ⇧⌘Z, or Ctrl+Z / Ctrl+Y), and _Reset_ is undoable too. The layout saves to
+  the API after a pause under an anonymous client id kept in localStorage, so it follows the
+  browser without an account. A save still pending when the tab closes goes out with `keepalive`.
+  On phones the grid becomes one column in reading order.
+- **Live badge**: the dashboard listens on `/ws` and invalidates only the cached queries whose date
+  range contains a rebuilt day; a saved layout is never refetched under you. It reconnects with
+  backoff and shows how old the data is.
 - **Stale banner**: shown when a day's numbers come from a source's last good data.
 
 The browser calls the API directly. Next.js reads `.env` from `apps/web/`, not the repo root, and

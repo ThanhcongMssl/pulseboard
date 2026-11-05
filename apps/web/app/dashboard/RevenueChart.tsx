@@ -31,7 +31,7 @@ export function RevenueChart({ points, channel }: Props) {
   const hasSpend = points.some((p) => p.spend);
   const hasTarget = points.some((p) => p.targetRevenue !== null);
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height="100%">
       <LineChart data={points} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke="var(--grid)" />
         <XAxis dataKey="date" tickFormatter={formatDay} minTickGap={32} {...axisProps} />

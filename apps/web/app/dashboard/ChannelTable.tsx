@@ -21,7 +21,7 @@ const num = 'px-3 py-2.5 text-right tabular-nums';
 /** Every channel's range KPIs; also the table view of the charts. */
 export function ChannelTable({ summary, selected, onSelect }: Props) {
   return (
-    <div className="overflow-x-auto">
+    <div className="h-full overflow-auto">
       <table className="w-full min-w-[640px] text-sm">
         <caption className="sr-only">KPIs by channel for the selected range</caption>
         <thead className="text-left text-xs text-muted">
