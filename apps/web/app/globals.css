@@ -16,7 +16,7 @@
   --axis: #c3c2b7;
   --ink-primary: #0b0b0b;
   --ink-secondary: #52514e;
-  --ink-muted: #898781;
+  --ink-muted: #6f6d68; /* 4.9:1 on the page, 5.2:1 on cards */
   --accent: #2a78d6;
 
   --series-1: #2a78d6;
@@ -42,7 +42,7 @@
   --axis: #383835;
   --ink-primary: #f0efec;
   --ink-secondary: #c3c2b7;
-  --ink-muted: #898781;
+  --ink-muted: #9a9891; /* 6.7:1 on the page, 5.5:1 on cards */
   --accent: #3987e5;
 
   --series-1: #3987e5;

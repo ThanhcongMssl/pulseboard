@@ -10,7 +10,12 @@ export function Sparkline({ values, color }: { values: (number | null)[]; color:
   return (
     <div aria-hidden className="h-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
+        {/* Decoration only: no keyboard focus inside the aria-hidden wrapper. */}
+        <LineChart
+          data={data}
+          margin={{ top: 2, right: 0, bottom: 2, left: 0 }}
+          accessibilityLayer={false}
+        >
           <YAxis hide domain={['dataMin', 'dataMax']} />
           <Line
             dataKey="v"
