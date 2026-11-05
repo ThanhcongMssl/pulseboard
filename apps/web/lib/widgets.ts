@@ -1,4 +1,5 @@
 import { GRID_COLUMNS, WIDGET_KINDS, type LayoutItem, type WidgetKind } from '@pulseboard/shared';
+import { cloneLayout, moveElement, verticalCompactor } from 'react-grid-layout/core';
 
 // The widget library and layout operations of the dashboard builder. Pure,
 // so adding, removing and converting layouts is tested without a grid.
@@ -169,3 +170,76 @@ export function sameLayout(a: readonly LayoutItem[], b: readonly LayoutItem[]): 
 /** Reading order (row, then column), for the single-column phone layout. */
 export const readingOrder = (items: readonly LayoutItem[]): LayoutItem[] =>
   [...items].sort((a, b) => a.y - b.y || a.x - b.x);
+
+export type MoveDirection = 'left' | 'right' | 'up' | 'down';
+export type ResizeDirection = 'wider' | 'narrower' | 'taller' | 'shorter';
+
+/** Whether two grid items share a column. */
+const sharesColumn = (a: GridItem, b: GridItem) => a.x < b.x + b.w && b.x < a.x + a.w;
+
+/** Our items, re-laid out the way the grid does after a drop: no overlaps, no gaps above. */
+const settle = (items: readonly LayoutItem[], grid: GridItem[]) =>
+  fromGrid(items, verticalCompactor.compact(grid, GRID_COLUMNS));
+
+/**
+ * The keyboard way to drag: the layout after moving widget `id` one step,
+ * with collisions resolved by react-grid-layout's own moveElement and
+ * compaction, exactly as a mouse drop would. Left and right move one column.
+ * Up and down jump past the nearest widget sharing a column: a single row
+ * would only be compacted back. At an edge the layout stays as it was.
+ */
+export function moveWidget(
+  items: readonly LayoutItem[],
+  id: string,
+  direction: MoveDirection,
+): LayoutItem[] {
+  const grid = cloneLayout(toGrid(items)) as GridItem[];
+  const item = grid.find((g) => g.i === id);
+  if (!item) return [...items];
+  let { x, y } = item;
+  if (direction === 'left') x = Math.max(0, x - 1);
+  if (direction === 'right') x = Math.min(GRID_COLUMNS - item.w, x + 1);
+  if (direction === 'up') {
+    const above = grid
+      .filter((g) => g !== item && sharesColumn(g, item) && g.y + g.h <= item.y)
+      .sort((a, b) => b.y - a.y)[0];
+    if (above) y = above.y;
+  }
+  if (direction === 'down') {
+    const below = grid
+      .filter((g) => g !== item && sharesColumn(g, item) && g.y >= item.y + item.h)
+      .sort((a, b) => a.y - b.y)[0];
+    if (below) y = below.y + below.h;
+  }
+  if (x === item.x && y === item.y) return [...items];
+  const moved = moveElement(grid, item, x, y, true, false, 'vertical', GRID_COLUMNS);
+  return settle(items, moved as GridItem[]);
+}
+
+/** The keyboard way to resize: one column or row, within the widget's minimum and the grid. */
+export function resizeWidget(
+  items: readonly LayoutItem[],
+  id: string,
+  direction: ResizeDirection,
+): LayoutItem[] {
+  const grid = toGrid(items);
+  const item = grid.find((g) => g.i === id);
+  if (!item) return [...items];
+  const w = Math.min(
+    Math.max(item.minW, item.w + (direction === 'wider' ? 1 : direction === 'narrower' ? -1 : 0)),
+    GRID_COLUMNS - item.x,
+  );
+  const h = Math.max(
+    item.minH,
+    item.h + (direction === 'taller' ? 1 : direction === 'shorter' ? -1 : 0),
+  );
+  if (w === item.w && h === item.h) return [...items];
+  return settle(
+    items,
+    grid.map((g) => (g === item ? { ...g, w, h } : g)),
+  );
+}
+
+/** Where a widget sits, for screen readers: "column 3, row 5, 2 columns by 4 rows". */
+export const describePlacement = ({ x, y, w, h }: LayoutItem) =>
+  `column ${x + 1}, row ${y + 1}, ${w} ${w === 1 ? 'column' : 'columns'} by ${h} rows`;

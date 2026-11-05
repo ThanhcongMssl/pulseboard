@@ -1,12 +1,22 @@
 'use client';
 
 import { GRID_COLUMNS, type LayoutItem } from '@pulseboard/shared';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import ReactGridLayout, { useContainerWidth, type Layout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import { isKpi } from '../../lib/kpis.ts';
-import { fromGrid, readingOrder, removeWidget, toGrid, WIDGETS } from '../../lib/widgets.ts';
-import { DRAG_HANDLE, WidgetChromeContext } from './Panel.tsx';
+import {
+  describePlacement,
+  fromGrid,
+  moveWidget,
+  readingOrder,
+  removeWidget,
+  resizeWidget,
+  sameLayout,
+  toGrid,
+  WIDGETS,
+} from '../../lib/widgets.ts';
+import { DRAG_HANDLE, MOVE_HELP_ID, WidgetChromeContext } from './Panel.tsx';
 import { Widget } from './Widgets.tsx';
 
 const ROW_HEIGHT = 32;
@@ -32,6 +42,15 @@ export function WidgetGrid({ items, editing, onCommit }: Props) {
   // Commit on drop rather than on every intermediate layout, so a drag is one undo step.
   const commit = (grid: Layout) => onCommit(fromGrid(items, grid));
 
+  // Keyboard moves commit one step each and say where the widget landed.
+  const [announcement, setAnnouncement] = useState('');
+  const step = (item: LayoutItem, next: LayoutItem[], blocked: string) => {
+    const title = WIDGETS[item.kind].title;
+    if (sameLayout(next, items)) return setAnnouncement(`${title} ${blocked}.`);
+    onCommit(next);
+    setAnnouncement(`${title}: ${describePlacement(next.find((i) => i.id === item.id)!)}.`);
+  };
+
   const cell = (item: LayoutItem) => (
     <WidgetChromeContext
       value={
@@ -39,6 +58,10 @@ export function WidgetGrid({ items, editing, onCommit }: Props) {
           ? {
               title: WIDGETS[item.kind].title,
               onRemove: () => onCommit(removeWidget(items, item.id)),
+              onMove: (direction) =>
+                step(item, moveWidget(items, item.id, direction), `can't move ${direction}`),
+              onResize: (direction) =>
+                step(item, resizeWidget(items, item.id, direction), `can't get ${direction}`),
             }
           : null
       }
@@ -49,6 +72,12 @@ export function WidgetGrid({ items, editing, onCommit }: Props) {
 
   return (
     <div ref={containerRef}>
+      <p id={MOVE_HELP_ID} className="sr-only">
+        Arrow keys move the widget; Shift and arrow keys resize it.
+      </p>
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
       {!mounted ? null : stacked ? (
         // Phones: reading order, KPI tiles two abreast, everything else full width.
         <div className="grid grid-cols-2 gap-3">

@@ -102,7 +102,7 @@ function KpiWidget({ kind }: { kind: KpiKind }) {
         <div
           className={`flex min-w-0 flex-1 items-start gap-1.5 ${chrome ? `${DRAG_HANDLE} cursor-grab active:cursor-grabbing` : ''}`}
         >
-          {chrome && <DragGrip lineHeight="h-5" />}
+          {chrome && <DragGrip chrome={chrome} lineHeight="h-5" />}
           <h2 className="min-w-0 truncate text-sm text-ink-secondary">{tile.label}</h2>
         </div>
         {/* The 24px button against the 20px title line: pull it up so both centre. */}
