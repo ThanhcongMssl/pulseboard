@@ -26,6 +26,8 @@ interface Props {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   fetchNextPage(): void;
+  /** The rows are the previous sort or filter's, shown until the new first page arrives. */
+  pending: boolean;
 }
 
 function SortHeader({
@@ -95,6 +97,7 @@ export function OrdersTable(props: Props) {
         role="table"
         aria-label="Orders in the selected range"
         aria-rowcount={(total ?? orders.length) + 1}
+        aria-busy={props.pending}
         className="min-w-[840px] text-sm whitespace-nowrap"
       >
         <div role="rowgroup" className="sticky top-0 z-10 bg-raised">
@@ -119,7 +122,11 @@ export function OrdersTable(props: Props) {
             </div>
           </div>
         </div>
-        <div role="rowgroup" className="relative" style={{ height: virtualizer.getTotalSize() }}>
+        <div
+          role="rowgroup"
+          className={`relative transition-opacity ${props.pending ? 'opacity-50' : ''}`}
+          style={{ height: virtualizer.getTotalSize() }}
+        >
           {items.map((item) => {
             const o = orders[item.index];
             const style = { height: ROW_PX, transform: `translateY(${item.start}px)` };

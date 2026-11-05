@@ -55,6 +55,7 @@ export const Orders: StoryObj<typeof OrdersTable> = {
         hasNextPage={false}
         isFetchingNextPage={false}
         fetchNextPage={() => {}}
+        pending={false}
       />
     </div>
   ),

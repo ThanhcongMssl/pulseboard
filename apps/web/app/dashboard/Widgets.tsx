@@ -328,6 +328,7 @@ function OrdersWidget() {
           hasNextPage={orders.hasNextPage}
           isFetchingNextPage={orders.isFetchingNextPage}
           fetchNextPage={() => void orders.fetchNextPage()}
+          pending={orders.isPlaceholderData}
         />
       )}
     </Panel>

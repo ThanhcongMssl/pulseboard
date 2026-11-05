@@ -38,6 +38,8 @@ test.describe('orders table', () => {
       'ascending',
     );
     await expect(orders.locator('header p')).toContainText('lowest revenue first');
+    // The previous sort's rows stay (dimmed) until the server's first page arrives.
+    await expect(orders.getByRole('table')).not.toHaveAttribute('aria-busy', 'true');
 
     const cells = orders.locator('[role=row][aria-rowindex] [role=cell]:nth-child(5)');
     await expect(cells.first()).toBeVisible();
