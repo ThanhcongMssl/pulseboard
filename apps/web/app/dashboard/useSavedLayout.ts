@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { getClientId } from '../../lib/clientId.ts';
 import { env } from '../../lib/env.ts';
-import { createHistory, push, redo, undo, undoRedoKey, type History } from '../../lib/history.ts';
+import { createHistory, push, redo, undo, type History } from '../../lib/history.ts';
 import { queryKeys } from '../../lib/queries.ts';
 import { DEFAULT_LAYOUT, sameLayout } from '../../lib/widgets.ts';
 
@@ -44,10 +44,6 @@ async function saveLayout(clientId: string, items: readonly LayoutItem[]): Promi
   if (!res.ok) throw new Error(`API responded ${res.status}`);
   return (await res.json()) as LayoutResponse;
 }
-
-const isEditable = (target: EventTarget | null) =>
-  target instanceof HTMLElement &&
-  (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
 
 /**
  * The viewer's dashboard layout with undo/redo, saved to the API under their
@@ -115,23 +111,6 @@ export function useSavedLayout() {
     reset: () => history && apply(push(history, [...DEFAULT_LAYOUT], sameLayout)),
     retrySave: flush,
   };
-
-  // Keyboard undo/redo, unless the viewer is typing in a field.
-  const latest = useRef(actions);
-  useEffect(() => {
-    latest.current = actions;
-  });
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (isEditable(e.target)) return;
-      const action = undoRedoKey(e);
-      if (!action) return;
-      e.preventDefault();
-      latest.current[action]();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
 
   // Leaving with a save still pending: send it anyway; keepalive lets the
   // request outlive the page.

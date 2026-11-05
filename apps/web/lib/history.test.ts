@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createHistory, push, redo, undo, undoRedoKey } from './history.ts';
+import { createHistory, push, redo, undo } from './history.ts';
 
 describe('history', () => {
   it('undoes and redoes steps in order', () => {
@@ -33,31 +33,5 @@ describe('history', () => {
     let h = createHistory(0);
     for (let i = 1; i <= 10; i++) h = push(h, i, Object.is, 3);
     expect(h.past).toEqual([7, 8, 9]);
-  });
-});
-
-describe('undoRedoKey', () => {
-  const key = (
-    key: string,
-    mods: Partial<Record<'metaKey' | 'ctrlKey' | 'shiftKey', boolean>> = {},
-  ) => ({
-    key,
-    metaKey: false,
-    ctrlKey: false,
-    shiftKey: false,
-    ...mods,
-  });
-
-  it('maps the usual shortcuts', () => {
-    expect(undoRedoKey(key('z', { metaKey: true }))).toBe('undo');
-    expect(undoRedoKey(key('z', { ctrlKey: true }))).toBe('undo');
-    expect(undoRedoKey(key('Z', { metaKey: true, shiftKey: true }))).toBe('redo');
-    expect(undoRedoKey(key('y', { ctrlKey: true }))).toBe('redo');
-  });
-
-  it('ignores plain keys and other combinations', () => {
-    expect(undoRedoKey(key('z'))).toBeNull();
-    expect(undoRedoKey(key('s', { metaKey: true }))).toBeNull();
-    expect(undoRedoKey(key('y', { metaKey: true }))).toBeNull();
   });
 });

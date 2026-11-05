@@ -2,12 +2,13 @@
 
 import { datesInRange } from '@pulseboard/shared';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { env } from '../../lib/env.ts';
 import {
   filtersToSearch,
   parseFilters,
   toQuery,
+  withRange,
   type Filters as FilterState,
 } from '../../lib/filters.ts';
 import { formatDay } from '../../lib/format.ts';
@@ -21,10 +22,13 @@ import { LayoutToolbar } from './LayoutToolbar.tsx';
 import { LiveBadge } from './LiveBadge.tsx';
 import { ScopeBar } from './ScopeBar.tsx';
 import { StaleBanner } from './StaleBanner.tsx';
+import { ShortcutHelp } from './ShortcutHelp.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
 import { Toast } from './Toast.tsx';
 import { useLiveQueries } from './useLiveQueries.ts';
 import { useSavedLayout } from './useSavedLayout.ts';
+import { useShortcuts } from './useShortcuts.ts';
+import { toggleTheme } from '../useTheme.ts';
 import { WidgetGrid } from './WidgetGrid.tsx';
 
 export function Dashboard() {
@@ -51,6 +55,29 @@ export function Dashboard() {
     }),
     [filters, range, dates, router, pathname],
   );
+  const help = useRef<HTMLDialogElement>(null);
+  useShortcuts((action) => {
+    // Read the filters from the URL, not this render: two quick presses can
+    // land before React renders the first one's URL change.
+    const filters = parseFilters(new URLSearchParams(window.location.search));
+    switch (action.type) {
+      case 'help':
+        return help.current?.showModal();
+      case 'range':
+        return state.setFilters(withRange(filters, { preset: action.preset }));
+      case 'compare':
+        return state.setFilters({ ...filters, compare: !filters.compare });
+      case 'edit':
+        return setEditing((e) => !e);
+      case 'theme':
+        return toggleTheme();
+      case 'undo':
+        return layout.undo();
+      case 'redo':
+        return layout.redo();
+    }
+  });
+
   const stale = useMemo(() => staleDays(reports.data?.reports ?? []), [reports.data]);
 
   return (
@@ -64,6 +91,15 @@ export function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => help.current?.showModal()}
+              aria-label="Keyboard shortcuts"
+              title="Keyboard shortcuts (?)"
+              className="hidden size-8 items-center justify-center rounded-full border border-line bg-raised text-sm text-ink-secondary hover:bg-line md:inline-flex"
+            >
+              ?
+            </button>
             <ThemeToggle />
             <LiveBadge status={live.status} lastComputedAt={status.data?.lastComputedAt ?? null} />
           </div>
@@ -135,6 +171,7 @@ export function Dashboard() {
         )}
       </div>
       <Toast update={live.update} />
+      <ShortcutHelp dialog={help} />
     </DashboardProvider>
   );
 }

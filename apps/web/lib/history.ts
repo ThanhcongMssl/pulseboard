@@ -46,19 +46,3 @@ export function redo<T>(history: History<T>): History<T> {
   if (next === undefined) return history;
   return { past: [...history.past, history.present], present: next, future: rest };
 }
-
-interface KeyLike {
-  key: string;
-  metaKey: boolean;
-  ctrlKey: boolean;
-  shiftKey: boolean;
-}
-
-/** ⌘Z / Ctrl+Z undoes; ⇧⌘Z, Ctrl+Shift+Z and Ctrl+Y redo. */
-export function undoRedoKey({ key, metaKey, ctrlKey, shiftKey }: KeyLike): 'undo' | 'redo' | null {
-  if (!metaKey && !ctrlKey) return null;
-  const k = key.toLowerCase();
-  if (k === 'z') return shiftKey ? 'redo' : 'undo';
-  if (k === 'y' && ctrlKey && !shiftKey) return 'redo';
-  return null;
-}
