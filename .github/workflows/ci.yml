@@ -31,7 +31,8 @@ jobs:
       - run: pnpm build
 
   # End to end: build the images, boot the stack (replica set included), run a
-  # backfill through ingest and aggregate, and read the reports back.
+  # backfill through ingest and aggregate, read the reports back, then drive
+  # the dashboard in a browser.
   stack:
     runs-on: ubuntu-latest
     steps:
@@ -56,6 +57,28 @@ jobs:
 
       - name: Dashboard responds
         run: curl -sf -o /dev/null localhost:3000
+
+      # Browser tests against the same stack: layout builder, cross-filtering,
+      # orders table, keyboard, and a live update through the whole pipeline.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @pulseboard/e2e exec playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: pnpm e2e
+        env:
+          E2E_BACKFILL_CMD: docker compose run --rm worker node dist/backfill.js 1
+
+      - name: Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 7
 
       - name: Logs
         if: failure()

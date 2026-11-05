@@ -313,8 +313,15 @@ packages/connectors The Connector interface and the five simulated sources
 
 ## Testing
 
-- **Unit tests (Vitest, 95 tests):** KPI math, date helpers, report building, range summaries,
+- **Unit tests (Vitest, 214 tests):** KPI math, date helpers, report building, range summaries,
   flow construction, upsert operations, connector determinism and keys, API query validation,
-  the WebSocket relay, and the dashboard's view helpers (filters, chart series, formatting).
+  the WebSocket relay, and the dashboard's view logic: URL filters and their transitions, compare
+  deltas, chart series and summaries, layout moves and undo history, shortcuts, formatting.
+- **End-to-end tests (Playwright, `e2e/`):** a real browser against a running stack. They drag a
+  widget and reload, move one by keyboard and undo it, cross-filter from the legend and go back,
+  narrow orders to a campaign, zoom the revenue chart, scroll and sort the virtualized orders
+  table, drive the command palette and shortcuts, and finally rebuild today's reports through the
+  whole pipeline and wait for the toast. Run `pnpm e2e` with `pnpm dev` up and a backfill done.
 - **CI** runs format, lint, typecheck, tests and builds on every push. A second job builds the
-  Docker images, boots the full stack, backfills a week, and checks that `/reports` returns it.
+  Docker images, boots the full stack, backfills a week, checks that `/reports` returns it, and
+  runs the end-to-end suite against it (the HTML report is uploaded when it fails).

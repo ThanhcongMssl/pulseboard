@@ -11,6 +11,7 @@ code and commit history are read by reviewers: keep both clean and explainable.
 apps/api         Express 5 REST + ws WebSocket (/ws). Reads; its only write is dashboard_layouts.
 apps/worker      BullMQ consumers: ingest jobs per source, then the aggregate job.
 apps/web         Next.js 16 (App Router) + Tailwind 4 + Recharts dashboard.
+e2e              Playwright end-to-end tests (*.e2e.ts), run against a live stack.
 packages/shared  Domain types + zod schemas, KPI math, queue names, event types. No I/O.
 packages/db      Mongo client, typed collection accessors, ensureIndexes().
 packages/connectors  Connector interface + simulated sources (deterministic seed data).
@@ -29,6 +30,7 @@ cp .env.example .env  # first time only
 pnpm dev              # api :4000, worker, web :3000
 pnpm backfill [days]  # queue ingest flows for the last N days (default 30); worker must run
 pnpm lint && pnpm typecheck && pnpm test   # run all three before every commit
+pnpm e2e             # Playwright against the running stack (pnpm dev + a backfill)
 pnpm format           # prettier --write
 pnpm build            # tsup bundles for api/worker, next build for web
 
