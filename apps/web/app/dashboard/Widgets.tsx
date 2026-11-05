@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  CHANNELS,
   datesInRange,
   type Channel,
   type OrderSort,
@@ -10,9 +11,10 @@ import {
 } from '@pulseboard/shared';
 import dynamic from 'next/dynamic';
 import { useContext, useMemo, useState } from 'react';
+import { describeChannelMix, describeRevenue } from '../../lib/a11y.ts';
 import { CHANNEL_COLORS, CHANNEL_LABELS } from '../../lib/channels.ts';
 import { toggleCampaign, toggleChannel, withRange } from '../../lib/filters.ts';
-import { formatCount } from '../../lib/format.ts';
+import { EMPTY, formatCentsExact, formatCount, formatDay } from '../../lib/format.ts';
 import { isKpi, kpiSeries, kpiTile, type KpiKind } from '../../lib/kpis.ts';
 import {
   coversRange,
@@ -20,8 +22,9 @@ import {
   kpiDelta,
   previousRange,
   withPrevious,
+  type ComparedPoint,
 } from '../../lib/compare.ts';
-import { channelStack, dailySeries, targetPacing } from '../../lib/series.ts';
+import { channelStack, dailySeries, targetPacing, type StackPoint } from '../../lib/series.ts';
 import { WIDGETS } from '../../lib/widgets.ts';
 import { CampaignTable } from './CampaignTable.tsx';
 import { ChannelTable } from './ChannelTable.tsx';
@@ -30,6 +33,7 @@ import { useCampaignNames, useCampaigns, useOrders, useReports } from './data.ts
 import { DRAG_HANDLE, DragGrip, Panel, RemoveButton, WidgetChromeContext } from './Panel.tsx';
 import { Sparkline } from './Sparkline.tsx';
 import { useTweenedNumber } from './useTweenedNumber.ts';
+import { SeriesTable, TableToggle, type Column } from './SeriesTable.tsx';
 import { WidgetEmpty, WidgetError, WidgetSkeleton } from './WidgetState.tsx';
 
 // Recharts and the virtualizer load in their own chunks, after the page shell
@@ -129,29 +133,57 @@ function KpiWidget({ kind }: { kind: KpiKind }) {
   );
 }
 
+const money = (n: number | null | undefined) =>
+  n === null || n === undefined ? EMPTY : formatCentsExact(n);
+
 function RevenueWidget() {
   const { filters, range, dates, setFilters } = useDashboard();
   const { data } = useReports(range);
   const previous = usePreviousPeriod();
+  const [table, setTable] = useState(false);
   const points = useMemo(() => {
     const current = dailySeries(data?.reports ?? [], filters.channel, dates);
-    if (!previous) return current;
-    const days = datesInRange(previous.range);
-    return withPrevious(current, dailySeries(previous.reports, filters.channel, days));
+    // Without a comparison every day's previousRevenue is null, and the line is hidden.
+    const before = previous
+      ? dailySeries(previous.reports, filters.channel, datesInRange(previous.range))
+      : [];
+    return withPrevious(current, before);
   }, [data, previous, filters.channel, dates]);
+  const scope = CHANNEL_LABELS[filters.channel];
+  const label = useMemo(() => describeRevenue(points, scope), [points, scope]);
+  const columns = useMemo<Column<ComparedPoint>[]>(
+    () => [
+      { label: 'Date', cell: (p) => formatDay(p.date) },
+      { label: 'Revenue', cell: (p) => money(p.revenue), numeric: true },
+      { label: 'Target', cell: (p) => money(p.targetRevenue), numeric: true },
+      { label: 'Ad spend', cell: (p) => money(p.spend), numeric: true },
+      ...(previous
+        ? [
+            {
+              label: 'Previous period',
+              cell: (p: ComparedPoint) => money(p.previousRevenue),
+              numeric: true,
+            },
+          ]
+        : []),
+    ],
+    [previous],
+  );
   return (
     <Panel
-      title={`Revenue vs. target · ${CHANNEL_LABELS[filters.channel]}`}
+      title={`Revenue vs. target · ${scope}`}
       subtitle="Daily, with ad spend for comparison · drag across to zoom"
+      actions={<TableToggle on={table} onChange={setTable} />}
     >
       {points.every((p) => p.revenue === null) ? (
-        <WidgetEmpty>
-          No reports for {CHANNEL_LABELS[filters.channel]} in this range yet.
-        </WidgetEmpty>
+        <WidgetEmpty>No reports for {scope} in this range yet.</WidgetEmpty>
+      ) : table ? (
+        <SeriesTable caption={label} columns={columns} rows={points} />
       ) : (
         <RevenueChart
           points={points}
           channel={filters.channel}
+          label={label}
           onZoom={(zoomed) => setFilters(withRange(filters, zoomed))}
         />
       )}
@@ -159,18 +191,44 @@ function RevenueWidget() {
   );
 }
 
+const MIX_COLUMNS: Column<StackPoint>[] = [
+  { label: 'Date', cell: (p) => formatDay(p.date) },
+  ...CHANNELS.map((c) => ({
+    label: CHANNEL_LABELS[c],
+    cell: (p: StackPoint) => money(p[c]),
+    numeric: true,
+  })),
+  {
+    label: 'Total',
+    cell: (p) =>
+      CHANNELS.some((c) => p[c] !== undefined)
+        ? money(CHANNELS.reduce((s, c) => s + (p[c] ?? 0), 0))
+        : EMPTY,
+    numeric: true,
+  },
+];
+
 function ChannelMixWidget() {
   const { filters, range, dates, setFilters } = useDashboard();
   const { data } = useReports(range);
+  const [table, setTable] = useState(false);
   const points = useMemo(() => channelStack(data?.reports ?? [], dates), [data, dates]);
+  const label = useMemo(() => describeChannelMix(points), [points]);
   return (
-    <Panel title="Revenue by channel" subtitle="Daily, stacked">
+    <Panel
+      title="Revenue by channel"
+      subtitle="Daily, stacked"
+      actions={<TableToggle on={table} onChange={setTable} />}
+    >
       {points.every((p) => Object.keys(p).length === 1) ? (
         <WidgetEmpty>No reports in this range yet.</WidgetEmpty>
+      ) : table ? (
+        <SeriesTable caption={label} columns={MIX_COLUMNS} rows={points} />
       ) : (
         <ChannelMixChart
           points={points}
           selected={filters.channel}
+          label={label}
           onSelect={(channel) => setFilters(toggleChannel(filters, channel))}
         />
       )}

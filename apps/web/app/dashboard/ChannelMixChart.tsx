@@ -12,10 +12,12 @@ interface Props {
   selected: ReportChannel;
   /** A channel was clicked, in the legend or on a bar. */
   onSelect(channel: Channel): void;
+  /** The chart in one sentence, its accessible name (see lib/a11y.ts). */
+  label: string;
 }
 
 /** The legend as buttons, in the same fixed order as the channel table. */
-function ChannelLegend({ selected, onSelect }: Omit<Props, 'points'>) {
+function ChannelLegend({ selected, onSelect }: Pick<Props, 'selected' | 'onSelect'>) {
   return (
     <ul aria-label="Channels" className="mb-2 flex flex-wrap gap-x-1 gap-y-0.5 text-xs">
       {CHANNELS.map((channel) => (
@@ -44,13 +46,15 @@ function ChannelLegend({ selected, onSelect }: Omit<Props, 'points'>) {
  * channel selected, the others fade so it stands out against the total.
  * Clicking a channel's bars or legend entry selects it (again: deselects).
  */
-export function ChannelMixChart({ points, selected, onSelect }: Props) {
+export function ChannelMixChart({ points, selected, onSelect, label }: Props) {
   return (
     <div className="flex h-full flex-col">
       <ChannelLegend selected={selected} onSelect={onSelect} />
-      <div className="min-h-0 flex-1">
+      {/* The bars are an image to assistive tech; the legend above is the keyboard way to select. */}
+      <div role="img" aria-label={label} className="min-h-0 flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
+            accessibilityLayer={false}
             data={points}
             margin={{ top: 8, right: 16, bottom: 0, left: 0 }}
             barCategoryGap="20%"
