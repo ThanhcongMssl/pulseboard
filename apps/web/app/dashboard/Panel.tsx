@@ -14,13 +14,19 @@ export const WidgetChromeContext = createContext<WidgetChrome | null>(null);
 export const DRAG_HANDLE = 'widget-drag-handle';
 
 /** Remove control shown on every widget in edit mode. Buttons never start a drag. */
-export function RemoveButton({ chrome }: { chrome: WidgetChrome }) {
+export function RemoveButton({
+  chrome,
+  className = '',
+}: {
+  chrome: WidgetChrome;
+  className?: string;
+}) {
   return (
     <button
       type="button"
       onClick={chrome.onRemove}
       aria-label={`Remove ${chrome.title}`}
-      className="rounded-md p-1 text-muted hover:bg-line hover:text-ink"
+      className={`rounded-md p-1 text-muted hover:bg-line hover:text-ink ${className}`}
     >
       <svg aria-hidden viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor">
         <path d="M4 4l8 8M12 4l-8 8" strokeWidth="1.75" strokeLinecap="round" />
@@ -29,13 +35,19 @@ export function RemoveButton({ chrome }: { chrome: WidgetChrome }) {
   );
 }
 
-function DragGrip() {
+/**
+ * The drag grip before a widget's title. `lineHeight` is the title's line box
+ * (`h-6` for text-base, `h-5` for text-sm), so the grip centres on its first line.
+ */
+export function DragGrip({ lineHeight }: { lineHeight: 'h-5' | 'h-6' }) {
   return (
-    <svg aria-hidden viewBox="0 0 16 16" className="size-4 shrink-0 text-muted" fill="currentColor">
-      {[4, 8, 12].flatMap((y) =>
-        [6, 10].map((x) => <circle key={`${x},${y}`} cx={x} cy={y} r="1.2" />),
-      )}
-    </svg>
+    <span aria-hidden className={`flex ${lineHeight} shrink-0 items-center`}>
+      <svg viewBox="0 0 16 16" className="size-4 text-muted" fill="currentColor">
+        {[4, 8, 12].flatMap((y) =>
+          [6, 10].map((x) => <circle key={`${x},${y}`} cx={x} cy={y} r="1.2" />),
+        )}
+      </svg>
+    </span>
   );
 }
 
@@ -58,7 +70,7 @@ export function Panel({
         <div
           className={`min-w-0 flex-1 ${chrome ? `${DRAG_HANDLE} flex cursor-grab items-start gap-1.5 active:cursor-grabbing` : ''}`}
         >
-          {chrome && <DragGrip />}
+          {chrome && <DragGrip lineHeight="h-6" />}
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold">{title}</h2>
             {subtitle && <p className="truncate text-sm text-muted">{subtitle}</p>}

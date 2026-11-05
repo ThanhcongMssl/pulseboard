@@ -12,7 +12,7 @@ import { ChannelTable } from './ChannelTable.tsx';
 import { useDashboard } from './DashboardContext.tsx';
 import { useCampaigns, useLatestOrders, useReports } from './data.ts';
 import { OrdersTable } from './OrdersTable.tsx';
-import { DRAG_HANDLE, Panel, RemoveButton, WidgetChromeContext } from './Panel.tsx';
+import { DRAG_HANDLE, DragGrip, Panel, RemoveButton, WidgetChromeContext } from './Panel.tsx';
 import { RevenueChart } from './RevenueChart.tsx';
 
 /** The paid channel to narrow campaigns and orders to, or null for all of them. */
@@ -40,12 +40,14 @@ function KpiWidget({ kind }: { kind: KpiKind }) {
       className="flex h-full flex-col rounded-xl border border-line bg-raised p-4"
     >
       <div className="flex items-start gap-1">
-        <h2
-          className={`min-w-0 flex-1 truncate text-sm text-ink-secondary ${chrome ? `${DRAG_HANDLE} cursor-grab active:cursor-grabbing` : ''}`}
+        <div
+          className={`flex min-w-0 flex-1 items-start gap-1.5 ${chrome ? `${DRAG_HANDLE} cursor-grab active:cursor-grabbing` : ''}`}
         >
-          {tile.label}
-        </h2>
-        {chrome && <RemoveButton chrome={chrome} />}
+          {chrome && <DragGrip lineHeight="h-5" />}
+          <h2 className="min-w-0 truncate text-sm text-ink-secondary">{tile.label}</h2>
+        </div>
+        {/* The 24px button against the 20px title line: pull it up so both centre. */}
+        {chrome && <RemoveButton chrome={chrome} className="-my-0.5" />}
       </div>
       <p className="mt-1 text-2xl font-semibold tracking-tight">{tile.value}</p>
       <p className="mt-1 truncate text-xs text-muted">{tile.caption}</p>
