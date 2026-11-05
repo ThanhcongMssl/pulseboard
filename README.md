@@ -7,6 +7,8 @@ and targets from five sources, precompute daily KPIs per channel (spend, revenue
 conversion rate) into MongoDB, and serve them to a dashboard that refreshes live when new numbers
 land.
 
+![Rearranging the dashboard, cross-filtering by channel, comparing with the previous period, jumping to a campaign from the command palette, and a live update arriving](docs/demo.gif)
+
 **Live demo: [pulseboard-opal.vercel.app](https://pulseboard-opal.vercel.app)** (free hosting: the
 first visit after a quiet spell takes up to a minute while the API wakes up).
 
@@ -322,6 +324,9 @@ packages/connectors The Connector interface and the five simulated sources
   narrow orders to a campaign, zoom the revenue chart, scroll and sort the virtualized orders
   table, drive the command palette and shortcuts, and finally rebuild today's reports through the
   whole pipeline and wait for the toast. Run `pnpm e2e` with `pnpm dev` up and a backfill done.
+  The demo GIF above is recorded the same way: `pnpm --filter @pulseboard/e2e demo:gif` plays a
+  scripted tour, screenshots it and encodes `docs/demo.gif` (pure JS, no ffmpeg; only the pixels
+  that changed are stored per frame).
 - **CI** runs format, lint, typecheck, tests and builds on every push. A second job builds the
   Docker images, boots the full stack, backfills a week, checks that `/reports` returns it, and
   runs the end-to-end suite against it (the HTML report is uploaded when it fails).
