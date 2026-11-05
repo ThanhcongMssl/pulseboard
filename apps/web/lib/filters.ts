@@ -139,3 +139,12 @@ export function presetCovering(range: DateRange, today: IsoDate = todayUtc()): R
     DEFAULT_PRESET
   );
 }
+
+/** How many filters differ from the defaults, for the phone's "Filters · 2" button. */
+export const activeFilterCount = (filters: Filters): number =>
+  [
+    !isPreset(filters.range) || filters.range.preset !== DEFAULT_PRESET,
+    filters.channel !== DEFAULT_FILTERS.channel,
+    filters.campaign !== null,
+    filters.compare,
+  ].filter(Boolean).length;

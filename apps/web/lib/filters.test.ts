@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activeFilterCount,
   DEFAULT_FILTERS,
   filtersToSearch,
   parseCustomRange,
@@ -123,5 +124,20 @@ describe('transitions', () => {
     expect(presetCovering({ from: '2026-10-07', to: '2026-10-20' }, TODAY)).toBe(30);
     expect(presetCovering({ from: '2026-08-08', to: '2026-08-20' }, TODAY)).toBe(90);
     expect(presetCovering({ from: '2026-01-01', to: '2026-01-20' }, TODAY)).toBe(30);
+  });
+});
+
+describe('activeFilterCount', () => {
+  it('counts what differs from the defaults', () => {
+    expect(activeFilterCount(DEFAULT_FILTERS)).toBe(0);
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, range: { preset: 7 }, compare: true })).toBe(2);
+    expect(
+      activeFilterCount({
+        range: { from: '2026-10-01', to: '2026-10-02' },
+        channel: 'paid_social',
+        campaign: 'fb_1',
+        compare: false,
+      }),
+    ).toBe(3);
   });
 });

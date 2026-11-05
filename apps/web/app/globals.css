@@ -132,3 +132,13 @@ body {
     }
   }
 }
+
+/* The phone filter sheet slides up from the bottom (not under reduced motion). */
+@media (prefers-reduced-motion: no-preference) {
+  .sheet {
+    transition: translate 200ms ease-out;
+    @starting-style {
+      translate: 0 100%;
+    }
+  }
+}
