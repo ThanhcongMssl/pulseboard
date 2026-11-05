@@ -20,6 +20,7 @@ export const rawAdSpendSchema = z.object({
   date: isoDateSchema,
   channel: channelSchema,
   campaignId: z.string().min(1),
+  campaignName: z.string().min(1),
   spend: centsSchema,
   impressions: count,
   clicks: count,
@@ -42,6 +43,8 @@ export const rawOrderSchema = z.object({
   orderId: z.string().min(1),
   date: isoDateSchema,
   channel: channelSchema,
+  // The ad campaign credited with the order (last click); null for unpaid channels.
+  campaignId: z.string().min(1).nullable(),
   revenue: centsSchema,
   isNewCustomer: z.boolean(),
 });
@@ -83,6 +86,31 @@ export const reportDailySchema = z.object({
 export type ReportDaily = z.infer<typeof reportDailySchema>;
 
 export const reportId = (date: string, channel: string) => `${date}:${channel}`;
+
+/**
+ * reports_campaign_daily — the campaign read model, built in the same
+ * transaction as reports_daily. One doc per (date, campaignId): the
+ * campaign's spend and delivery from the ad platform next to the orders
+ * attributed to it. `_id` is `${date}:${campaignId}`.
+ */
+export const reportCampaignDailySchema = z.object({
+  _id: z.string(),
+  date: isoDateSchema,
+  channel: channelSchema,
+  campaignId: z.string().min(1),
+  campaignName: z.string().min(1),
+  spend: centsSchema,
+  impressions: count,
+  clicks: count,
+  orders: count,
+  revenue: centsSchema,
+  newCustomers: count,
+  roas: z.number().nullable(),
+  cac: z.number().nullable(),
+  ctr: z.number().nullable(),
+  computedAt: z.date(),
+});
+export type ReportCampaignDaily = z.infer<typeof reportCampaignDailySchema>;
 
 export const INGEST_STATUSES = ['running', 'succeeded', 'failed'] as const;
 

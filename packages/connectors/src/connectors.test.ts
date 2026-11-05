@@ -10,7 +10,9 @@ import {
   type DateRange,
   type Source,
 } from '@pulseboard/shared';
+import { CAMPAIGNS } from './ads.ts';
 import { connectors, withFailureRate } from './index.ts';
+import { pick } from './shopify.ts';
 
 const range: DateRange = { from: '2026-09-28', to: '2026-10-04' };
 
@@ -77,6 +79,47 @@ describe('simulated market', () => {
       .reduce((s, o) => s + o.revenue, 0);
     expect(roas(revenue, spend)).toBeGreaterThan(1.5);
     expect(roas(revenue, spend)).toBeLessThan(6);
+  });
+});
+
+describe('campaign attribution', () => {
+  it('credits paid orders to a campaign that spent that day, and unpaid ones to none', async () => {
+    const spend = [
+      ...(await connectors.facebook_ads.fetch(range)),
+      ...(await connectors.google_ads.fetch(range)),
+    ];
+    const spent = new Set(spend.map((r) => `${r.date}|${r.channel}|${r.campaignId}`));
+    for (const order of await connectors.shopify.fetch(range)) {
+      if (order.channel === 'paid_social' || order.channel === 'paid_search') {
+        expect(spent).toContain(`${order.date}|${order.channel}|${order.campaignId}`);
+      } else {
+        expect(order.campaignId).toBeNull();
+      }
+    }
+  });
+
+  it('gives efficient campaigns a higher ROAS', async () => {
+    const spend = await connectors.google_ads.fetch(range);
+    const orders = await connectors.shopify.fetch(range);
+    const roasOf = (id: string) =>
+      roas(
+        orders.filter((o) => o.campaignId === id).reduce((s, o) => s + o.revenue, 0),
+        spend.filter((r) => r.campaignId === id).reduce((s, r) => s + r.spend, 0),
+      )!;
+    const [brand, generic] = CAMPAIGNS.google_ads;
+    expect(roasOf(brand!.id)).toBeGreaterThan(roasOf(generic!.id));
+  });
+});
+
+describe('pick', () => {
+  it('returns the bucket a draw lands in', () => {
+    expect([0, 0.19, 0.2, 0.69, 0.7, 0.999].map((d) => pick([0.2, 0.5, 0.3], d))).toEqual([
+      0, 0, 1, 1, 2, 2,
+    ]);
+  });
+
+  it('falls back to the last bucket when shares sum just under 1', () => {
+    expect(pick([0.3333, 0.3333, 0.3333], 0.99995)).toBe(2);
   });
 });
 
