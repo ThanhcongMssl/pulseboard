@@ -4,6 +4,7 @@ import {
   CHANNELS,
   conversionRate,
   ctr,
+  DATA_VERSION,
   daysInMonth,
   monthOf,
   reportId,
@@ -81,6 +82,7 @@ export function buildDailyReports({
     conversionRate: conversionRate(s.orders, s.sessions),
     target,
     staleSources: [...staleSources],
+    dataVersion: DATA_VERSION,
     computedAt,
   });
 

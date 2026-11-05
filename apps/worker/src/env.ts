@@ -9,8 +9,8 @@ const envSchema = z.object({
   BACKFILL_DAYS: z.coerce.number().int().positive().default(30),
   // Share of connector fetches that fail on purpose, to demo retries and stale sources.
   CONNECTOR_FAILURE_RATE: z.coerce.number().min(0).max(1).default(0),
-  // Days of history to ingest at startup when there are no reports yet (0 = off).
-  // For hosted demos, which start with an empty database and can't run `pnpm backfill`.
+  // Days of history to keep built at startup (0 = off): any day missing or built by
+  // an older DATA_VERSION is queued. For hosted demos, which can't run `pnpm backfill`.
   SEED_DAYS: z.coerce.number().int().min(0).default(0),
 });
 

@@ -51,6 +51,7 @@ function row(
     | 'conversionRate'
     | 'target'
     | 'staleSources'
+    | 'dataVersion'
     | 'computedAt'
   >,
   target: number,
@@ -65,6 +66,7 @@ function row(
     conversionRate: conversionRate(v.orders, v.sessions),
     target: { revenue: target, spend: 0 },
     staleSources: [],
+    dataVersion: 1,
     computedAt: '2026-11-05T06:00:00.000Z',
   };
 }

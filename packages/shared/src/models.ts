@@ -81,6 +81,8 @@ export const reportDailySchema = z.object({
   // Sources whose ingest gave up for this day: their numbers are the last good
   // data. Repeated on every row of the day so any row can show the warning.
   staleSources: z.array(sourceSchema),
+  // The DATA_VERSION that built it, so a seed can rebuild outdated days.
+  dataVersion: z.number().int(),
   computedAt: z.date(),
 });
 export type ReportDaily = z.infer<typeof reportDailySchema>;

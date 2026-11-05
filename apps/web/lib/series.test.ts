@@ -24,6 +24,7 @@ const report = (
       ? null
       : { revenue: extra.target, spend: 0 },
   staleSources: extra.stale ?? [],
+  dataVersion: 1,
   computedAt: '2026-10-29T00:00:00.000Z',
 });
 

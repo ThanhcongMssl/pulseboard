@@ -1,7 +1,8 @@
 import { FlowProducer, Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
-import { closeMongo, collections, connectMongo, ensureIndexes } from '@pulseboard/db';
+import { closeMongo, connectMongo, ensureIndexes } from '@pulseboard/db';
 import {
+  DATA_VERSION,
   lastNDays,
   QUEUES,
   SOURCES,
@@ -13,6 +14,7 @@ import { aggregateProcessor } from './aggregate.ts';
 import { connection, env } from './env.ts';
 import { addDateFlows } from './flows.ts';
 import { ingestProcessor, type IngestResult } from './ingest.ts';
+import { daysToSeed } from './seed.ts';
 
 const db = await connectMongo(env.MONGO_URL);
 await ensureIndexes(db);
@@ -53,10 +55,15 @@ await scheduleQueue.upsertJobScheduler(
 );
 console.log(`worker running; ingesting today and yesterday every ${env.INGEST_EVERY_MINUTES} min`);
 
-// Seed only into an empty database, so restarts never re-queue the history.
-if (env.SEED_DAYS > 0 && (await collections(db).reportsDaily.estimatedDocumentCount()) === 0) {
-  await addDateFlows(flows, lastNDays(env.SEED_DAYS), String(Date.now()));
-  console.log(`no reports yet; queued ${env.SEED_DAYS} days of history`);
+// Build any day of the seed window that is missing or was built by an older
+// DATA_VERSION, so a deploy that changes the data re-seeds on its own. Finished
+// days are skipped, so a restart re-queues nothing.
+if (env.SEED_DAYS > 0) {
+  const days = await daysToSeed(db, env.SEED_DAYS);
+  if (days.length) await addDateFlows(flows, days, String(Date.now()));
+  console.log(
+    `seed: ${days.length} of ${env.SEED_DAYS} days queued (data version ${DATA_VERSION})`,
+  );
 }
 
 async function shutdown() {

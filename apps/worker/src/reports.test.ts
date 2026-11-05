@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CHANNELS,
+  DATA_VERSION,
   reportCampaignDailySchema,
   reportDailySchema,
   type RawTarget,
@@ -113,6 +114,10 @@ describe('buildDailyReports', () => {
     expect(docs.every((d) => d.staleSources.length === 1 && d.staleSources[0] === 'ga4')).toBe(
       true,
     );
+  });
+
+  it('stamps every row with the current data version', () => {
+    expect(buildDailyReports(inputs()).every((d) => d.dataVersion === DATA_VERSION)).toBe(true);
   });
 });
 
