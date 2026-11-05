@@ -3,7 +3,7 @@
 import type { IsoDate } from '@pulseboard/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import { isAffected } from '../../lib/queries.ts';
+import { isAffected, isPipelineQuery } from '../../lib/queries.ts';
 import { useLive, type LiveStatus } from './useLive.ts';
 
 /** A backfill rebuilds many days in a burst; invalidate once it settles. */
@@ -13,7 +13,7 @@ const INVALIDATE_DEBOUNCE_MS = 500;
  * Keep the query cache in sync with the API's reports-updated events. Rebuilt
  * dates are collected over a short window, then only the queries whose range
  * contains one of them are invalidated (active ones refetch). After a
- * reconnect, events may have been missed, so everything is invalidated.
+ * reconnect, events may have been missed, so all pipeline queries are.
  */
 export function useLiveQueries(): LiveStatus {
   const queryClient = useQueryClient();
@@ -32,9 +32,10 @@ export function useLiveQueries(): LiveStatus {
       const rebuilt = [...p.dates];
       const all = p.all;
       pending.current = { dates: new Set(), all: false };
-      void queryClient.invalidateQueries(
-        all ? undefined : { predicate: (query) => isAffected(query.queryKey, rebuilt) },
-      );
+      void queryClient.invalidateQueries({
+        predicate: (query) =>
+          all ? isPipelineQuery(query.queryKey) : isAffected(query.queryKey, rebuilt),
+      });
     }, INVALIDATE_DEBOUNCE_MS);
   };
 

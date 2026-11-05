@@ -1,4 +1,4 @@
-import type { IsoDate } from '@pulseboard/shared';
+import type { Channel, IsoDate } from '@pulseboard/shared';
 import { env } from './env.ts';
 import { affectsView } from './live.ts';
 
@@ -13,23 +13,36 @@ export interface DateRange {
 
 export const queryKeys = {
   reports: ({ from, to }: DateRange) => ['reports', from, to] as const,
+  campaigns: ({ from, to }: DateRange, channel: Channel | null) =>
+    ['campaigns', from, to, channel] as const,
+  orders: ({ from, to }: DateRange, channel: Channel | null) =>
+    ['orders', from, to, channel] as const,
   status: () => ['status'] as const,
+  layout: (clientId: string) => ['layout', clientId] as const,
 };
 
-/** Endpoints whose data doesn't depend on a date range: refetched after every rebuild. */
+/** Queries over pipeline output, keyed [name, from, to, ...]: refetched when a day in range is rebuilt. */
+const RANGED = new Set(['reports', 'campaigns', 'orders']);
+/** Pipeline freshness: refetched after every rebuild. */
 const RANGELESS = new Set(['status']);
 
 /**
  * Whether a cached query is out of date once these days were rebuilt. Range
  * queries only when a rebuilt day falls inside their range, so a backfill of
- * last year doesn't refetch the dashboard showing this month.
+ * last year doesn't refetch the dashboard showing this month. Anything else
+ * (a saved layout) doesn't come from the pipeline and is never touched.
  */
 export function isAffected(queryKey: readonly unknown[], dates: readonly IsoDate[]): boolean {
   const [name, from, to] = queryKey;
-  if (typeof name === 'string' && RANGELESS.has(name)) return true;
-  if (typeof from !== 'string' || typeof to !== 'string') return true;
+  if (typeof name !== 'string') return false;
+  if (RANGELESS.has(name)) return true;
+  if (!RANGED.has(name) || typeof from !== 'string' || typeof to !== 'string') return false;
   return affectsView({ dates }, { from, to });
 }
+
+/** Whether a query shows pipeline output, so a missed event (a reconnect) may have changed it. */
+export const isPipelineQuery = ([name]: readonly unknown[]): boolean =>
+  typeof name === 'string' && (RANGED.has(name) || RANGELESS.has(name));
 
 /** GET a path of the API as JSON; TanStack Query passes the abort signal. */
 export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
