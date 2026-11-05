@@ -3,7 +3,7 @@
 import type { Channel, ReportChannel, WidgetKind } from '@pulseboard/shared';
 import { useContext, useMemo, type ReactNode } from 'react';
 import { CHANNEL_LABELS } from '../../lib/channels.ts';
-import { toggleChannel } from '../../lib/filters.ts';
+import { toggleCampaign, toggleChannel } from '../../lib/filters.ts';
 import { isKpi, kpiTile, type KpiKind } from '../../lib/kpis.ts';
 import { channelStack, dailySeries, targetPacing } from '../../lib/series.ts';
 import { WIDGETS } from '../../lib/widgets.ts';
@@ -11,7 +11,7 @@ import { CampaignTable } from './CampaignTable.tsx';
 import { ChannelMixChart } from './ChannelMixChart.tsx';
 import { ChannelTable } from './ChannelTable.tsx';
 import { useDashboard } from './DashboardContext.tsx';
-import { useCampaigns, useLatestOrders, useReports } from './data.ts';
+import { useCampaignNames, useCampaigns, useLatestOrders, useReports } from './data.ts';
 import { OrdersTable } from './OrdersTable.tsx';
 import { DRAG_HANDLE, DragGrip, Panel, RemoveButton, WidgetChromeContext } from './Panel.tsx';
 import { RevenueChart } from './RevenueChart.tsx';
@@ -74,12 +74,16 @@ function RevenueWidget() {
 }
 
 function ChannelMixWidget() {
-  const { filters, range, dates } = useDashboard();
+  const { filters, range, dates, setFilters } = useDashboard();
   const { data } = useReports(range);
   const points = useMemo(() => channelStack(data?.reports ?? [], dates), [data, dates]);
   return (
     <Panel title="Revenue by channel" subtitle="Daily, stacked">
-      <ChannelMixChart points={points} selected={filters.channel} />
+      <ChannelMixChart
+        points={points}
+        selected={filters.channel}
+        onSelect={(channel) => setFilters(toggleChannel(filters, channel))}
+      />
     </Panel>
   );
 }
@@ -99,7 +103,7 @@ function ChannelsWidget() {
 }
 
 function CampaignsWidget() {
-  const { filters, range } = useDashboard();
+  const { filters, range, setFilters } = useDashboard();
   const unpaid = filters.channel !== 'all' && !PAID.has(filters.channel);
   const campaigns = useCampaigns(range, asChannel(filters.channel));
   return (
@@ -116,7 +120,11 @@ function CampaignsWidget() {
       ) : campaigns.data.campaigns.length === 0 ? (
         <Note>No campaign spend in this range.</Note>
       ) : (
-        <CampaignTable campaigns={campaigns.data.campaigns} />
+        <CampaignTable
+          campaigns={campaigns.data.campaigns}
+          selected={filters.campaign}
+          onSelect={(c) => setFilters(toggleCampaign(filters, c.campaignId, c.channel))}
+        />
       )}
     </Panel>
   );
@@ -125,20 +133,16 @@ function CampaignsWidget() {
 function OrdersWidget() {
   const { filters, range } = useDashboard();
   const orders = useLatestOrders(range, asChannel(filters.channel), filters.campaign);
-  // Names for the campaign column; shared with the campaigns widget when it shows every channel.
-  const campaigns = useCampaigns(range, null);
-  const names = useMemo(
-    () => new Map(campaigns.data?.campaigns.map((c) => [c.campaignId, c.campaignName])),
-    [campaigns.data],
-  );
+  const names = useCampaignNames(range);
   const total = orders.data?.total;
+  const scope = filters.campaign ? ` · ${names.get(filters.campaign) ?? filters.campaign}` : '';
   return (
     <Panel
       title={WIDGETS['table.orders'].title}
       subtitle={
-        total === null || total === undefined
+        (total === null || total === undefined
           ? 'Newest first'
-          : `Newest ${orders.data!.orders.length} of ${total.toLocaleString('en-US')}`
+          : `Newest ${orders.data!.orders.length} of ${total.toLocaleString('en-US')}`) + scope
       }
     >
       {orders.isError && !orders.data ? (

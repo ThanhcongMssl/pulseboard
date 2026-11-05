@@ -19,6 +19,7 @@ import { useReports, useStatus } from './data.ts';
 import { Filters } from './Filters.tsx';
 import { LayoutToolbar } from './LayoutToolbar.tsx';
 import { LiveBadge } from './LiveBadge.tsx';
+import { ScopeBar } from './ScopeBar.tsx';
 import { StaleBanner } from './StaleBanner.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
 import { useLiveQueries } from './useLiveQueries.ts';
@@ -67,24 +68,27 @@ export function Dashboard() {
           </div>
         </header>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Filters filters={filters} onChange={state.setFilters} />
-          {layout.items && (
-            <LayoutToolbar
-              items={layout.items}
-              editing={editing}
-              onToggleEditing={() => setEditing((e) => !e)}
-              onAdd={(kind) => layout.commit(addWidget(layout.items!, kind))}
-              canUndo={layout.canUndo}
-              canRedo={layout.canRedo}
-              onUndo={layout.undo}
-              onRedo={layout.redo}
-              isDefault={layout.isDefault}
-              onReset={layout.reset}
-              saveState={layout.saveState}
-              onRetrySave={layout.retrySave}
-            />
-          )}
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Filters filters={filters} onChange={state.setFilters} />
+            {layout.items && (
+              <LayoutToolbar
+                items={layout.items}
+                editing={editing}
+                onToggleEditing={() => setEditing((e) => !e)}
+                onAdd={(kind) => layout.commit(addWidget(layout.items!, kind))}
+                canUndo={layout.canUndo}
+                canRedo={layout.canRedo}
+                onUndo={layout.undo}
+                onRedo={layout.redo}
+                isDefault={layout.isDefault}
+                onReset={layout.reset}
+                saveState={layout.saveState}
+                onRetrySave={layout.retrySave}
+              />
+            )}
+          </div>
+          <ScopeBar />
         </div>
 
         {reports.isError && !reports.data ? (

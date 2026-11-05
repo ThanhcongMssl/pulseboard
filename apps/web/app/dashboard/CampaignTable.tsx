@@ -11,8 +11,14 @@ import {
 const num = 'px-3 py-2.5 text-right tabular-nums';
 const HEADERS = ['Spend', 'Revenue', 'ROAS', 'CAC', 'CTR', 'Orders'];
 
+interface Props {
+  campaigns: CampaignSummary[];
+  selected: string | null;
+  onSelect(campaign: CampaignSummary): void;
+}
+
 /** Range totals per ad campaign, largest spend first (the API's order). */
-export function CampaignTable({ campaigns }: { campaigns: CampaignSummary[] }) {
+export function CampaignTable({ campaigns, selected, onSelect }: Props) {
   return (
     <div className="h-full overflow-auto">
       <table className="w-full min-w-[720px] text-sm whitespace-nowrap">
@@ -34,9 +40,19 @@ export function CampaignTable({ campaigns }: { campaigns: CampaignSummary[] }) {
         </thead>
         <tbody>
           {campaigns.map((c) => (
-            <tr key={c.campaignId} className="border-b border-line last:border-0">
-              <th scope="row" className="px-3 py-2.5 text-left font-medium">
-                {c.campaignName}
+            <tr
+              key={c.campaignId}
+              aria-selected={selected === c.campaignId}
+              className="border-b border-line last:border-0 aria-selected:bg-line"
+            >
+              <th scope="row" className="px-3 py-1 text-left font-medium">
+                <button
+                  type="button"
+                  onClick={() => onSelect(c)}
+                  className="rounded py-1.5 text-left hover:underline"
+                >
+                  {c.campaignName}
+                </button>
               </th>
               <td className="px-3 py-2.5 text-ink-secondary">
                 <span className="inline-flex items-center gap-2">

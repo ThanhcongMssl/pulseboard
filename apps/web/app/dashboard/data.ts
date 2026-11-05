@@ -8,6 +8,7 @@ import type {
   StatusResponse,
 } from '@pulseboard/shared';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { getJson, queryKeys, type DateRange } from '../../lib/queries.ts';
 
 // One hook per endpoint. Widgets call them for what they show; TanStack Query
@@ -42,6 +43,15 @@ export const useCampaigns = (range: DateRange, channel: Channel | null) =>
       getJson<CampaignsResponse>(`/campaigns?${params(range, { channel })}`, signal),
     placeholderData: keepPreviousData,
   });
+
+/**
+ * Campaign names by id over the range, for labels outside the campaign table.
+ * Shares its cache entry with the campaign widget when that shows every channel.
+ */
+export function useCampaignNames(range: DateRange): Map<string, string> {
+  const { data } = useCampaigns(range, null);
+  return useMemo(() => new Map(data?.campaigns.map((c) => [c.campaignId, c.campaignName])), [data]);
+}
 
 /** The newest orders in the range, of a channel or campaign: the first page only. */
 export const useLatestOrders = (

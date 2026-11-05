@@ -38,6 +38,8 @@ export function RevenueChart({ points, channel }: Props) {
         <YAxis tickFormatter={formatCents} width={64} axisLine={false} {...axisProps} />
         <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--axis)' }} />
         <Legend
+          // Recharts sorts legend entries by name unless told not to; keep series order.
+          itemSorter={null}
           iconType="plainline"
           wrapperStyle={{ fontSize: 12, color: 'var(--ink-secondary)' }}
         />
