@@ -127,6 +127,15 @@ export function Filters({ filters, onChange }: Props) {
           ))}
         </select>
       </label>
+      <button
+        type="button"
+        aria-pressed={filters.compare}
+        onClick={() => onChange({ ...filters, compare: !filters.compare })}
+        title="Compare with the previous period of the same length"
+        className="rounded-lg border border-line bg-raised px-3 py-1.5 text-sm text-ink-secondary hover:bg-line aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-page"
+      >
+        Compare
+      </button>
     </div>
   );
 }

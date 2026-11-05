@@ -16,9 +16,10 @@ import { getJson, queryKeys, type DateRange } from '../../lib/queries.ts';
 // key, and keeps the previous range on screen (dimmed) while the next loads.
 
 /** Every channel for the range: the table and mix chart need them all, so switching channel is instant. */
-export const useReports = (range: DateRange) =>
+export const useReports = (range: DateRange, enabled = true) =>
   useQuery({
     queryKey: queryKeys.reports(range),
+    enabled,
     queryFn: ({ signal }) =>
       getJson<ReportsResponse>(`/reports?from=${range.from}&to=${range.to}`, signal),
     placeholderData: keepPreviousData,

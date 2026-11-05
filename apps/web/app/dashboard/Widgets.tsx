@@ -1,10 +1,22 @@
 'use client';
 
-import type { Channel, ReportChannel, WidgetKind } from '@pulseboard/shared';
+import {
+  datesInRange,
+  type Channel,
+  type ReportChannel,
+  type WidgetKind,
+} from '@pulseboard/shared';
 import { useContext, useMemo, type ReactNode } from 'react';
 import { CHANNEL_LABELS } from '../../lib/channels.ts';
 import { toggleCampaign, toggleChannel, withRange } from '../../lib/filters.ts';
 import { isKpi, kpiTile, type KpiKind } from '../../lib/kpis.ts';
+import {
+  coversRange,
+  describeDelta,
+  kpiDelta,
+  previousRange,
+  withPrevious,
+} from '../../lib/compare.ts';
 import { channelStack, dailySeries, targetPacing } from '../../lib/series.ts';
 import { WIDGETS } from '../../lib/widgets.ts';
 import { CampaignTable } from './CampaignTable.tsx';
@@ -21,8 +33,22 @@ const asChannel = (channel: ReportChannel): Channel | null => (channel === 'all'
 
 const PAID: ReadonlySet<ReportChannel> = new Set(['paid_social', 'paid_search']);
 
+const TONE = { good: 'text-good', bad: 'text-critical', neutral: 'text-muted' } as const;
+
 function Note({ children }: { children: ReactNode }) {
   return <p className="flex h-full items-center justify-center text-sm text-muted">{children}</p>;
+}
+
+/**
+ * The previous period's reports while comparing, once loaded for exactly that
+ * period (never a placeholder from another range) and covering every day.
+ */
+function usePreviousPeriod() {
+  const { filters, range } = useDashboard();
+  const previous = useMemo(() => previousRange(range), [range]);
+  const { data, isPlaceholderData } = useReports(previous, filters.compare);
+  if (!filters.compare || !data || isPlaceholderData) return null;
+  return { range: previous, reports: data.reports, summary: data.summary };
 }
 
 function KpiWidget({ kind }: { kind: KpiKind }) {
@@ -35,6 +61,12 @@ function KpiWidget({ kind }: { kind: KpiKind }) {
     [data, kind, channel],
   );
   const tile = kpiTile(kind, channel, data?.summary[channel], pacing);
+  const previous = usePreviousPeriod();
+  const delta =
+    previous && coversRange(previous.reports, channel, previous.range)
+      ? kpiDelta(kind, data?.summary[channel], previous.summary[channel])
+      : null;
+  const said = delta && describeDelta(delta);
   return (
     <section
       aria-label={tile.label}
@@ -50,7 +82,18 @@ function KpiWidget({ kind }: { kind: KpiKind }) {
         {/* The 24px button against the 20px title line: pull it up so both centre. */}
         {chrome && <RemoveButton chrome={chrome} className="-my-0.5" />}
       </div>
-      <p className="mt-1 text-2xl font-semibold tracking-tight">{tile.value}</p>
+      <p className="mt-1 flex items-baseline gap-2">
+        <span className="text-2xl font-semibold tracking-tight">{tile.value}</span>
+        {said && (
+          <span
+            className={`text-xs font-medium whitespace-nowrap ${TONE[delta!.tone]}`}
+            title={said.long}
+          >
+            <span aria-hidden>{said.short}</span>
+            <span className="sr-only">{said.long}</span>
+          </span>
+        )}
+      </p>
       <p className="mt-1 truncate text-xs text-muted">{tile.caption}</p>
     </section>
   );
@@ -59,10 +102,13 @@ function KpiWidget({ kind }: { kind: KpiKind }) {
 function RevenueWidget() {
   const { filters, range, dates, setFilters } = useDashboard();
   const { data } = useReports(range);
-  const points = useMemo(
-    () => dailySeries(data?.reports ?? [], filters.channel, dates),
-    [data, filters.channel, dates],
-  );
+  const previous = usePreviousPeriod();
+  const points = useMemo(() => {
+    const current = dailySeries(data?.reports ?? [], filters.channel, dates);
+    if (!previous) return current;
+    const days = datesInRange(previous.range);
+    return withPrevious(current, dailySeries(previous.reports, filters.channel, days));
+  }, [data, previous, filters.channel, dates]);
   return (
     <Panel
       title={`Revenue vs. target · ${CHANNEL_LABELS[filters.channel]}`}

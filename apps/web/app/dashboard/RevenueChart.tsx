@@ -15,12 +15,14 @@ import {
 } from 'recharts';
 import { CHANNEL_COLORS } from '../../lib/channels.ts';
 import { formatCents, formatDay } from '../../lib/format.ts';
+import type { ComparedPoint } from '../../lib/compare.ts';
 import type { DailyPoint } from '../../lib/series.ts';
 import { labelDay, zoomSelection } from '../../lib/zoom.ts';
 import { axisProps, ChartTooltip } from './ChartTooltip.tsx';
 
 interface Props {
-  points: DailyPoint[];
+  /** With previousRevenue while comparing with the previous period. */
+  points: DailyPoint[] | ComparedPoint[];
   channel: ReportChannel;
   /** Dragging across the chart picked this range. */
   onZoom(range: DateRange): void;
@@ -38,6 +40,7 @@ export function RevenueChart({ points, channel, onZoom }: Props) {
   const revenueColor = channel === 'all' ? 'var(--ink-primary)' : CHANNEL_COLORS[channel];
   const hasSpend = points.some((p) => p.spend);
   const hasTarget = points.some((p) => p.targetRevenue !== null);
+  const hasPrevious = points.some((p) => 'previousRevenue' in p && p.previousRevenue !== null);
   return (
     <ResponsiveContainer width="100%" height="100%" className="select-none">
       <LineChart
@@ -77,6 +80,19 @@ export function RevenueChart({ points, channel, onZoom }: Props) {
           activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--surface-raised)' }}
           isAnimationActive={false}
         />
+        {hasPrevious && (
+          <Line
+            name="Previous period"
+            dataKey="previousRevenue"
+            stroke={revenueColor}
+            strokeWidth={1.5}
+            strokeOpacity={0.6}
+            strokeDasharray="6 3"
+            dot={false}
+            activeDot={false}
+            isAnimationActive={false}
+          />
+        )}
         {hasTarget && (
           <Line
             name="Target"
