@@ -70,6 +70,12 @@
   --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/* Reserve the scrollbar's width, so the page doesn't shift sideways when the
+   dashboard grows taller than the skeleton it replaces. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   background: var(--page);
   color: var(--ink-primary);

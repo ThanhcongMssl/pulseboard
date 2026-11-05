@@ -40,10 +40,9 @@ export function formatRelative(iso: string, now: Date = new Date()): string {
   return `${Math.floor(hours / 24)} d ago`;
 }
 
+// One formatter for every day label: toLocaleDateString builds a new one per
+// call, which added up across axis ticks, tooltips and thousands of order rows.
+const day = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
 /** `Oct 29` from `2026-10-29`, in UTC like every report date. */
-export const formatDay = (date: string) =>
-  new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
+export const formatDay = (date: string) => day.format(new Date(`${date}T00:00:00Z`));

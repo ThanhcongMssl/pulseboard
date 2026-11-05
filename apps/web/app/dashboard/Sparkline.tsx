@@ -1,31 +1,29 @@
-'use client';
+import { sparkPath } from '../../lib/sparkline.ts';
 
-import { useMemo } from 'react';
-import { Line, LineChart, ResponsiveContainer, YAxis } from 'recharts';
+// Drawn in a fixed box and stretched to the tile; the stroke keeps its width.
+const W = 100;
+const H = 32;
 
-/** A KPI's daily trend: no axes, no tooltip, decoration next to the number. */
+/** A KPI's daily trend: one decorative line, no axes, no tooltip. */
 export function Sparkline({ values, color }: { values: (number | null)[]; color: string }) {
-  const data = useMemo(() => values.map((v, i) => ({ i, v })), [values]);
-  if (values.every((v) => v === null)) return null;
+  const d = sparkPath(values, W, H);
+  if (!d) return null;
   return (
-    <div aria-hidden className="h-full">
-      <ResponsiveContainer width="100%" height="100%">
-        {/* Decoration only: no keyboard focus inside the aria-hidden wrapper. */}
-        <LineChart
-          data={data}
-          margin={{ top: 2, right: 0, bottom: 2, left: 0 }}
-          accessibilityLayer={false}
-        >
-          <YAxis hide domain={['dataMin', 'dataMax']} />
-          <Line
-            dataKey="v"
-            stroke={color}
-            strokeWidth={1.5}
-            dot={false}
-            isAnimationActive={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <svg
+      aria-hidden
+      viewBox={`0 -2 ${W} ${H + 4}`}
+      preserveAspectRatio="none"
+      className="block size-full overflow-visible"
+    >
+      <path
+        d={d}
+        fill="none"
+        stroke={color}
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
   );
 }

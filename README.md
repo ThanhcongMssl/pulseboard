@@ -206,8 +206,8 @@ Open http://localhost:3000 once a backfill has run.
   can be linked. Every change is a history entry, so back and forward step through an analysis.
 - **Widgets**: KPI tiles (revenue against the prorated target, ad spend, ROAS, CAC, conversion
   rate, orders; with all channels selected, ROAS is _blended_), daily revenue against target and
-  spend, daily revenue stacked by channel, and tables of channels, campaigns and every order in the range (virtualized, sortable by date or
-  revenue, loading keyset pages as you scroll).
+  spend, daily revenue stacked by channel, and tables of channels, campaigns and every order in
+  the range (virtualized, sortable by date or revenue, loading keyset pages as you scroll).
 - **Cross-filtering and drill-down**: click a channel's bars, legend entry or table row to focus
   the whole dashboard on it, and a campaign row to narrow the orders to that campaign. A
   breadcrumb (All channels › Paid social › Retargeting) leads back up.
@@ -227,6 +227,13 @@ Open http://localhost:3000 once a backfill has run.
   range contains a rebuilt day; a saved layout is never refetched under you. It reconnects with
   backoff and shows how old the data is.
 - **Stale banner**: shown when a day's numbers come from a source's last good data.
+- **Performance**: Lighthouse on the production build (`next build && next start`, default layout,
+  30 days) scores **97–98 on desktop** (LCP ≈ 0.9 s, TBT ≈ 100 ms, CLS 0.002) and **71–74 on
+  mobile**. The mobile run simulates a mid-range phone at 4× CPU slowdown, and its ≈ 1 s of
+  main-thread work is mostly React and Recharts rendering the two charts. Accessibility and best
+  practices score 100 on both. The charts and the orders table load in their own chunks
+  (`next/dynamic`), the KPI sparklines are a single SVG path each rather than chart components, and
+  the scrollbar gutter is reserved so the page doesn't shift sideways when data arrives.
 
 The browser calls the API directly. Next.js reads `.env` from `apps/web/`, not the repo root, and
 the defaults point at `localhost:4000`. To use another API, set `NEXT_PUBLIC_API_URL` and

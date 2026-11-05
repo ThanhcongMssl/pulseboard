@@ -8,6 +8,7 @@ import {
   type SortDir,
   type WidgetKind,
 } from '@pulseboard/shared';
+import dynamic from 'next/dynamic';
 import { useContext, useMemo, useState, type ReactNode } from 'react';
 import { CHANNEL_COLORS, CHANNEL_LABELS } from '../../lib/channels.ts';
 import { toggleCampaign, toggleChannel, withRange } from '../../lib/filters.ts';
@@ -23,15 +24,28 @@ import {
 import { channelStack, dailySeries, targetPacing } from '../../lib/series.ts';
 import { WIDGETS } from '../../lib/widgets.ts';
 import { CampaignTable } from './CampaignTable.tsx';
-import { ChannelMixChart } from './ChannelMixChart.tsx';
 import { ChannelTable } from './ChannelTable.tsx';
 import { useDashboard } from './DashboardContext.tsx';
 import { useCampaignNames, useCampaigns, useOrders, useReports } from './data.ts';
-import { OrdersTable } from './OrdersTable.tsx';
 import { DRAG_HANDLE, DragGrip, Panel, RemoveButton, WidgetChromeContext } from './Panel.tsx';
-import { RevenueChart } from './RevenueChart.tsx';
 import { Sparkline } from './Sparkline.tsx';
 import { useTweenedNumber } from './useTweenedNumber.ts';
+
+// Recharts and the virtualizer load in their own chunks, after the page shell
+// and the KPI tiles, and only for the widgets on the dashboard.
+const Loading = () => <div aria-hidden className="h-full animate-pulse rounded-lg bg-line" />;
+const RevenueChart = dynamic(() => import('./RevenueChart.tsx').then((m) => m.RevenueChart), {
+  ssr: false,
+  loading: Loading,
+});
+const ChannelMixChart = dynamic(
+  () => import('./ChannelMixChart.tsx').then((m) => m.ChannelMixChart),
+  { ssr: false, loading: Loading },
+);
+const OrdersTable = dynamic(() => import('./OrdersTable.tsx').then((m) => m.OrdersTable), {
+  ssr: false,
+  loading: Loading,
+});
 
 /** The paid channel to narrow campaigns and orders to, or null for all of them. */
 const asChannel = (channel: ReportChannel): Channel | null => (channel === 'all' ? null : channel);
