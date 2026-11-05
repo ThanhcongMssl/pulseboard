@@ -2,6 +2,7 @@
 
 import type { LayoutItem, WidgetKind } from '@pulseboard/shared';
 import { WIDGET_ORDER, WIDGETS } from '../../lib/widgets.ts';
+import { useIsMac } from '../useIsMac.ts';
 import type { SaveState } from './useSavedLayout.ts';
 
 interface Props {
@@ -22,8 +23,6 @@ interface Props {
 const LIBRARY_ID = 'widget-library';
 const button =
   'inline-flex items-center gap-1.5 rounded-lg border border-line bg-raised px-3 py-1.5 text-sm hover:bg-line disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-raised';
-
-const isMac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
 function SaveStatus({ state, onRetry }: { state: SaveState; onRetry(): void }) {
   if (state === 'error')
@@ -46,7 +45,8 @@ function SaveStatus({ state, onRetry }: { state: SaveState; onRetry(): void }) {
 /** Builder controls. Rearranging is a desktop affair: on phones the grid is one column. */
 export function LayoutToolbar(props: Props) {
   const placed = new Set(props.items.map((i) => i.kind));
-  const mod = isMac() ? '⌘' : 'Ctrl+';
+  const mac = useIsMac();
+  const mod = mac ? '⌘' : 'Ctrl+';
   return (
     // The group hugs the right edge, so anything that changes width (the save
     // status, the edit-only buttons) sits on the left and the rest stay put.
@@ -70,7 +70,7 @@ export function LayoutToolbar(props: Props) {
             type="button"
             onClick={props.onRedo}
             disabled={!props.canRedo}
-            title={`Redo (${isMac() ? '⇧⌘Z' : 'Ctrl+Y'})`}
+            title={`Redo (${mac ? '⇧⌘Z' : 'Ctrl+Y'})`}
             className={button}
           >
             Redo

@@ -4,6 +4,7 @@ import type { RangePreset } from './filters.ts';
 // help dialog shows. Pure, so the key handling is tested without a DOM.
 
 export type ShortcutAction =
+  | { type: 'palette' }
   | { type: 'help' }
   | { type: 'range'; preset: RangePreset }
   | { type: 'compare' }
@@ -41,10 +42,13 @@ const PLAIN: Record<string, ShortcutAction> = {
 };
 
 /**
- * The action for a key press, or null. Nothing fires while the viewer types
- * in a field (`inField`), so "c" in a date input stays a "c".
+ * The action for a key press, or null. Apart from ⌘K, nothing fires while the
+ * viewer types in a field (`inField`), so "c" in a date input stays a "c".
  */
 export function shortcutFor(event: KeyLike, inField: boolean): ShortcutAction | null {
+  // ⌘K / Ctrl+K opens the palette from anywhere, fields included.
+  if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey)
+    if (event.key.toLowerCase() === 'k') return { type: 'palette' };
   if (inField) return null;
   const undoRedo = undoRedoKey(event);
   if (undoRedo) return { type: undoRedo };
@@ -58,6 +62,7 @@ export function shortcutFor(event: KeyLike, inField: boolean): ShortcutAction | 
 export function shortcutList(mac: boolean): { keys: string[]; label: string }[] {
   const mod = mac ? '⌘' : 'Ctrl';
   return [
+    { keys: [mod, 'K'], label: 'Command palette' },
     { keys: ['1', '2', '3'], label: 'Last 7, 30 or 90 days' },
     { keys: ['C'], label: 'Compare with the previous period' },
     { keys: ['E'], label: 'Edit layout' },

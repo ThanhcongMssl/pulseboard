@@ -16,6 +16,12 @@ describe('shortcutFor', () => {
     expect(shortcutFor(key('?', { shiftKey: true }), false)).toEqual({ type: 'help' });
   });
 
+  it('opens the palette with ⌘K or Ctrl+K, even from a field', () => {
+    expect(shortcutFor(key('k', { metaKey: true }), false)).toEqual({ type: 'palette' });
+    expect(shortcutFor(key('K', { ctrlKey: true }), true)).toEqual({ type: 'palette' });
+    expect(shortcutFor(key('k'), false)).toBeNull();
+  });
+
   it('routes undo and redo', () => {
     expect(shortcutFor(key('z', { metaKey: true }), false)).toEqual({ type: 'undo' });
     expect(shortcutFor(key('y', { ctrlKey: true }), false)).toEqual({ type: 'redo' });

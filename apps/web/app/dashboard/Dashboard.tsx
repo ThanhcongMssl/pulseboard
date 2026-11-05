@@ -22,16 +22,19 @@ import { LayoutToolbar } from './LayoutToolbar.tsx';
 import { LiveBadge } from './LiveBadge.tsx';
 import { ScopeBar } from './ScopeBar.tsx';
 import { StaleBanner } from './StaleBanner.tsx';
+import { CommandPalette, showPalette } from './CommandPalette.tsx';
 import { ShortcutHelp } from './ShortcutHelp.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
 import { Toast } from './Toast.tsx';
 import { useLiveQueries } from './useLiveQueries.ts';
 import { useSavedLayout } from './useSavedLayout.ts';
 import { useShortcuts } from './useShortcuts.ts';
+import { useIsMac } from '../useIsMac.ts';
 import { toggleTheme } from '../useTheme.ts';
 import { WidgetGrid } from './WidgetGrid.tsx';
 
 export function Dashboard() {
+  const modKey = useIsMac() ? '⌘' : 'Ctrl ';
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -56,11 +59,14 @@ export function Dashboard() {
     [filters, range, dates, router, pathname],
   );
   const help = useRef<HTMLDialogElement>(null);
+  const palette = useRef<HTMLDialogElement>(null);
   useShortcuts((action) => {
     // Read the filters from the URL, not this render: two quick presses can
     // land before React renders the first one's URL change.
     const filters = parseFilters(new URLSearchParams(window.location.search));
     switch (action.type) {
+      case 'palette':
+        return showPalette(palette.current);
       case 'help':
         return help.current?.showModal();
       case 'range':
@@ -91,6 +97,16 @@ export function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => showPalette(palette.current)}
+              className="hidden items-center gap-2 rounded-full border border-line bg-raised py-1 pr-1.5 pl-3 text-sm text-ink-secondary hover:bg-line md:inline-flex"
+            >
+              Search
+              <kbd className="rounded border border-line bg-page px-1.5 font-sans text-xs text-muted">
+                {modKey}K
+              </kbd>
+            </button>
             <button
               type="button"
               onClick={() => help.current?.showModal()}
@@ -172,6 +188,13 @@ export function Dashboard() {
       </div>
       <Toast update={live.update} />
       <ShortcutHelp dialog={help} />
+      <CommandPalette
+        dialog={palette}
+        layout={layout}
+        editing={editing}
+        onToggleEditing={() => setEditing((e) => !e)}
+        onShowShortcuts={() => help.current?.showModal()}
+      />
     </DashboardProvider>
   );
 }

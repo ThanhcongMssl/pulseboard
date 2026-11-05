@@ -1,14 +1,12 @@
 'use client';
 
-import { useSyncExternalStore, type RefObject } from 'react';
+import type { RefObject } from 'react';
 import { shortcutList } from '../../lib/shortcuts.ts';
-
-const noop = () => () => {};
-const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform);
+import { useIsMac } from '../useIsMac.ts';
 
 /** The keyboard shortcuts, in a native modal dialog (Esc and the backdrop close it). */
 export function ShortcutHelp({ dialog }: { dialog: RefObject<HTMLDialogElement | null> }) {
-  const mac = useSyncExternalStore(noop, isMac, () => false);
+  const mac = useIsMac();
   return (
     <dialog
       ref={dialog}
