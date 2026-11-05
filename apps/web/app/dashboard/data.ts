@@ -7,7 +7,8 @@ import type {
   ReportsResponse,
   StatusResponse,
 } from '@pulseboard/shared';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import type { OrderSort, SortDir } from '@pulseboard/shared';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { getJson, queryKeys, type DateRange } from '../../lib/queries.ts';
 
@@ -54,19 +55,36 @@ export function useCampaignNames(range: DateRange): Map<string, string> {
   return useMemo(() => new Map(data?.campaigns.map((c) => [c.campaignId, c.campaignName])), [data]);
 }
 
-/** The newest orders in the range, of a channel or campaign: the first page only. */
-export const useLatestOrders = (
+/** Rows per /orders page: the API's maximum, so a long scroll makes few requests. */
+const ORDERS_PAGE = 200;
+
+/**
+ * Every order in the range, of a channel or campaign, in the chosen order:
+ * keyset pages fetched one after another as the table scrolls. The first
+ * page carries the total.
+ */
+export const useOrders = (
   range: DateRange,
   channel: Channel | null,
   campaign: string | null,
-  limit = 50,
+  sort: OrderSort,
+  dir: SortDir,
 ) =>
-  useQuery({
-    queryKey: queryKeys.orders(range, channel, campaign),
-    queryFn: ({ signal }) =>
+  useInfiniteQuery({
+    queryKey: queryKeys.orders(range, channel, campaign, sort, dir),
+    queryFn: ({ signal, pageParam }) =>
       getJson<OrdersResponse>(
-        `/orders?${params(range, { channel, campaignId: campaign, limit: String(limit) })}`,
+        `/orders?${params(range, {
+          channel,
+          campaignId: campaign,
+          sort,
+          dir,
+          limit: String(ORDERS_PAGE),
+          cursor: pageParam,
+        })}`,
         signal,
       ),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.nextCursor,
     placeholderData: keepPreviousData,
   });

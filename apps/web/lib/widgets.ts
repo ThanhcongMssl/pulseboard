@@ -64,8 +64,8 @@ export const WIDGETS: Record<WidgetKind, WidgetSpec> = {
     minH: 5,
   },
   'table.orders': {
-    title: 'Latest orders',
-    description: 'The latest orders in the range',
+    title: 'All orders',
+    description: 'Every order in the range, sortable by date or revenue',
     w: 12,
     h: 10,
     minW: 6,

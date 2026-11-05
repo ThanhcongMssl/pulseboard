@@ -3,12 +3,15 @@
 import {
   datesInRange,
   type Channel,
+  type OrderSort,
   type ReportChannel,
+  type SortDir,
   type WidgetKind,
 } from '@pulseboard/shared';
-import { useContext, useMemo, type ReactNode } from 'react';
+import { useContext, useMemo, useState, type ReactNode } from 'react';
 import { CHANNEL_COLORS, CHANNEL_LABELS } from '../../lib/channels.ts';
 import { toggleCampaign, toggleChannel, withRange } from '../../lib/filters.ts';
+import { formatCount } from '../../lib/format.ts';
 import { isKpi, kpiSeries, kpiTile, type KpiKind } from '../../lib/kpis.ts';
 import {
   coversRange,
@@ -23,7 +26,7 @@ import { CampaignTable } from './CampaignTable.tsx';
 import { ChannelMixChart } from './ChannelMixChart.tsx';
 import { ChannelTable } from './ChannelTable.tsx';
 import { useDashboard } from './DashboardContext.tsx';
-import { useCampaignNames, useCampaigns, useLatestOrders, useReports } from './data.ts';
+import { useCampaignNames, useCampaigns, useOrders, useReports } from './data.ts';
 import { OrdersTable } from './OrdersTable.tsx';
 import { DRAG_HANDLE, DragGrip, Panel, RemoveButton, WidgetChromeContext } from './Panel.tsx';
 import { RevenueChart } from './RevenueChart.tsx';
@@ -195,29 +198,54 @@ function CampaignsWidget() {
   );
 }
 
+const ORDER_LABELS = {
+  date: { desc: 'newest first', asc: 'oldest first' },
+  revenue: { desc: 'highest revenue first', asc: 'lowest revenue first' },
+} as const;
+
 function OrdersWidget() {
   const { filters, range } = useDashboard();
-  const orders = useLatestOrders(range, asChannel(filters.channel), filters.campaign);
+  const [order, setOrder] = useState<{ sort: OrderSort; dir: SortDir }>({
+    sort: 'date',
+    dir: 'desc',
+  });
+  const orders = useOrders(
+    range,
+    asChannel(filters.channel),
+    filters.campaign,
+    order.sort,
+    order.dir,
+  );
   const names = useCampaignNames(range);
-  const total = orders.data?.total;
+  const rows = useMemo(() => orders.data?.pages.flatMap((p) => p.orders) ?? [], [orders.data]);
+  const total = orders.data?.pages[0]?.total ?? null;
   const scope = filters.campaign ? ` · ${names.get(filters.campaign) ?? filters.campaign}` : '';
+  // A header click sorts by that column, or flips the direction when it already does.
+  const onSort = (sort: OrderSort) =>
+    setOrder((o) => ({ sort, dir: o.sort === sort && o.dir === 'desc' ? 'asc' : 'desc' }));
   return (
     <Panel
       title={WIDGETS['table.orders'].title}
-      subtitle={
-        (total === null || total === undefined
-          ? 'Newest first'
-          : `Newest ${orders.data!.orders.length} of ${total.toLocaleString('en-US')}`) + scope
-      }
+      subtitle={`${total === null ? 'Orders' : `${formatCount(total)} orders`} · ${ORDER_LABELS[order.sort][order.dir]}${scope}`}
     >
       {orders.isError && !orders.data ? (
         <Note>Couldn’t load orders.</Note>
       ) : !orders.data ? (
         <Note>Loading orders…</Note>
-      ) : orders.data.orders.length === 0 ? (
+      ) : rows.length === 0 ? (
         <Note>No orders in this range.</Note>
       ) : (
-        <OrdersTable orders={orders.data.orders} campaignNames={names} />
+        <OrdersTable
+          orders={rows}
+          total={total}
+          campaignNames={names}
+          sort={order.sort}
+          dir={order.dir}
+          onSort={onSort}
+          hasNextPage={orders.hasNextPage}
+          isFetchingNextPage={orders.isFetchingNextPage}
+          fetchNextPage={() => void orders.fetchNextPage()}
+        />
       )}
     </Panel>
   );

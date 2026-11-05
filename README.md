@@ -206,7 +206,8 @@ Open http://localhost:3000 once a backfill has run.
   can be linked. Every change is a history entry, so back and forward step through an analysis.
 - **Widgets**: KPI tiles (revenue against the prorated target, ad spend, ROAS, CAC, conversion
   rate, orders; with all channels selected, ROAS is _blended_), daily revenue against target and
-  spend, daily revenue stacked by channel, and tables of channels, campaigns and the latest orders.
+  spend, daily revenue stacked by channel, and tables of channels, campaigns and every order in the range (virtualized, sortable by date or
+  revenue, loading keyset pages as you scroll).
 - **Cross-filtering and drill-down**: click a channel's bars, legend entry or table row to focus
   the whole dashboard on it, and a campaign row to narrow the orders to that campaign. A
   breadcrumb (All channels › Paid social › Retargeting) leads back up.

@@ -1,4 +1,4 @@
-import type { Channel, IsoDate } from '@pulseboard/shared';
+import type { Channel, IsoDate, OrderSort, SortDir } from '@pulseboard/shared';
 import { env } from './env.ts';
 import { affectsView } from './live.ts';
 
@@ -15,8 +15,13 @@ export const queryKeys = {
   reports: ({ from, to }: DateRange) => ['reports', from, to] as const,
   campaigns: ({ from, to }: DateRange, channel: Channel | null) =>
     ['campaigns', from, to, channel] as const,
-  orders: ({ from, to }: DateRange, channel: Channel | null, campaign: string | null) =>
-    ['orders', from, to, channel, campaign] as const,
+  orders: (
+    { from, to }: DateRange,
+    channel: Channel | null,
+    campaign: string | null,
+    sort: OrderSort = 'date',
+    dir: SortDir = 'desc',
+  ) => ['orders', from, to, channel, campaign, sort, dir] as const,
   status: () => ['status'] as const,
   layout: (clientId: string) => ['layout', clientId] as const,
 };
