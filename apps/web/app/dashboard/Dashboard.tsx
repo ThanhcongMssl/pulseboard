@@ -22,6 +22,7 @@ import { LiveBadge } from './LiveBadge.tsx';
 import { ScopeBar } from './ScopeBar.tsx';
 import { StaleBanner } from './StaleBanner.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
+import { Toast } from './Toast.tsx';
 import { useLiveQueries } from './useLiveQueries.ts';
 import { useSavedLayout } from './useSavedLayout.ts';
 import { WidgetGrid } from './WidgetGrid.tsx';
@@ -36,7 +37,7 @@ export function Dashboard() {
   const dates = useMemo(() => datesInRange(range), [range]);
   const reports = useReports(range);
   const status = useStatus();
-  const live = useLiveQueries();
+  const live = useLiveQueries(range);
   const layout = useSavedLayout();
   const [editing, setEditing] = useState(false);
 
@@ -64,7 +65,7 @@ export function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <LiveBadge status={live} lastComputedAt={status.data?.lastComputedAt ?? null} />
+            <LiveBadge status={live.status} lastComputedAt={status.data?.lastComputedAt ?? null} />
           </div>
         </header>
 
@@ -133,6 +134,7 @@ export function Dashboard() {
           </div>
         )}
       </div>
+      <Toast update={live.update} />
     </DashboardProvider>
   );
 }
