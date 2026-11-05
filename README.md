@@ -205,7 +205,8 @@ Open http://localhost:3000 once a backfill has run.
   (`/?from=2026-10-01&to=2026-10-14&channel=paid_social&campaign=fb_2&compare=prev`), so any view
   can be linked. Every change is a history entry, so back and forward step through an analysis.
 - **Widgets**: KPI tiles (revenue against the prorated target, ad spend, ROAS, CAC, conversion
-  rate, orders; with all channels selected, ROAS is _blended_), daily revenue against target and
+  rate, orders; with all channels selected, ROAS is _blended_), each with a sparkline and a value
+  that counts to its new number when the data changes, daily revenue against target and
   spend, daily revenue stacked by channel, and tables of channels, campaigns and every order in
   the range (virtualized, sortable by date or revenue, loading keyset pages as you scroll).
 - **Cross-filtering and drill-down**: click a channel's bars, legend entry or table row to focus
@@ -217,22 +218,33 @@ Open http://localhost:3000 once a backfill has run.
   by whether it's good news (CAC going up isn't), and the revenue chart overlays the previous
   period. Ratios compare range ratios built from totals, and a period with missing days shows no
   change rather than a misleading one.
+- **Command palette and shortcuts**: ⌘K (Ctrl+K) reaches every range, channel, campaign, view and
+  layout action by name. Single keys do the common ones (1/2/3 for 7/30/90 days, C compare, E edit
+  layout, T theme), and ? lists them.
 - **Layout builder**: _Edit layout_ lets you drag widgets by their header, resize them from the
-  corner, remove them, and add more from the widget library. Every change is a snapshot in an
+  corner, remove them, and add more from the widget library. From the keyboard, focus a widget's
+  grip and use the arrows to move it, Shift+arrows to resize; a live region says where it landed. Every change is a snapshot in an
   undo history (⌘Z / ⇧⌘Z, or Ctrl+Z / Ctrl+Y), and _Reset_ is undoable too. The layout saves to
   the API after a pause under an anonymous client id kept in localStorage, so it follows the
   browser without an account. A save still pending when the tab closes goes out with `keepalive`.
-  On phones the grid becomes one column in reading order.
-- **Live badge**: the dashboard listens on `/ws` and invalidates only the cached queries whose date
-  range contains a rebuilt day; a saved layout is never refetched under you. It reconnects with
-  backoff and shows how old the data is.
+- **Live updates**: the dashboard listens on `/ws` and invalidates only the cached queries whose
+  date range contains a rebuilt day; a saved layout is never refetched under you. When a rebuild
+  touches the range on screen, a toast says which days and channels changed. The badge reconnects
+  with backoff and shows how old the data is.
+- **Accessibility**: each chart is named by a one-sentence summary (totals, best and worst day, or
+  each channel's share) and has a _Table_ view of the same numbers. The orders table keeps table
+  semantics while virtualized (`aria-rowcount` against the server's total). Muted text meets WCAG
+  AA contrast, every widget has its own loading, empty and error state, and motion respects
+  `prefers-reduced-motion`.
+- **Phones**: the grid becomes one column in reading order, editing is hidden, and the filters
+  collapse into a bottom sheet behind a _Filters_ button that counts the active ones.
 - **Stale banner**: shown when a day's numbers come from a source's last good data.
 - **Performance**: Lighthouse on the production build (`next build && next start`, default layout,
-  30 days) scores **97–98 on desktop** (LCP ≈ 0.9 s, TBT ≈ 100 ms, CLS 0.002) and **71–74 on
+  30 days) scores **94–99 on desktop** (LCP ≈ 0.95 s, TBT ≈ 80 ms, CLS 0.005) and **70–75 on
   mobile**. The mobile run simulates a mid-range phone at 4× CPU slowdown, and its ≈ 1 s of
   main-thread work is mostly React and Recharts rendering the two charts. Accessibility and best
-  practices score 100 on both. The charts and the orders table load in their own chunks
-  (`next/dynamic`), the KPI sparklines are a single SVG path each rather than chart components, and
+  practices score 100 on both. The charts, the orders table and the command palette load in their
+  own chunks (`next/dynamic`), the palette only when first opened; the KPI sparklines are a single SVG path each rather than chart components, and
   the scrollbar gutter is reserved so the page doesn't shift sideways when data arrives.
 
 The browser calls the API directly. Next.js reads `.env` from `apps/web/`, not the repo root, and
