@@ -8,9 +8,13 @@ const ratio = (numerator: number, denominator: number): number | null =>
 /** Return on ad spend: revenue / spend (unitless). */
 export const roas = (revenueCents: number, spendCents: number) => ratio(revenueCents, spendCents);
 
-/** Customer acquisition cost: spend / new customers, rounded to whole cents like all money. */
+/**
+ * Customer acquisition cost: spend / new customers, rounded to whole cents
+ * like all money. Null without spend: an unpaid channel's customers weren't
+ * bought, so a CAC of $0 would read as an unbeatable paid channel.
+ */
 export const cac = (spendCents: number, newCustomers: number) => {
-  const value = ratio(spendCents, newCustomers);
+  const value = spendCents === 0 ? null : ratio(spendCents, newCustomers);
   return value === null ? null : Math.round(value);
 };
 

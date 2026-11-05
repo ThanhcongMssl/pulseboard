@@ -36,9 +36,9 @@ describe('buildDailyReports', () => {
     expect(paid_social).toMatchObject({ roas: 4, cac: 2_500, conversionRate: 0.01 });
   });
 
-  it('gives a channel without spend a null ROAS and a CAC of 0', () => {
+  it('gives a channel without spend a null ROAS and CAC', () => {
     const { organic } = byChannel(buildDailyReports(inputs()));
-    expect(organic).toMatchObject({ spend: 0, roas: null, cac: 0, conversionRate: 0.02 });
+    expect(organic).toMatchObject({ spend: 0, roas: null, cac: null, conversionRate: 0.02 });
   });
 
   it('reports channels without raw data as zeros with null ratios', () => {

@@ -27,6 +27,10 @@ describe('cac', () => {
   it('is null when there are no new customers', () => {
     expect(cac(30_000, 0)).toBeNull();
   });
+
+  it('is null without spend: unpaid customers have no acquisition cost', () => {
+    expect(cac(0, 12)).toBeNull();
+  });
 });
 
 describe('conversionRate', () => {
