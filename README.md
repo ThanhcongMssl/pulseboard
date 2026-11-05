@@ -200,12 +200,22 @@ blended ROAS is all revenue over all spend, and a quiet day doesn't weigh as muc
 
 Open http://localhost:3000 once a backfill has run.
 
-- **Filters**: 7, 30 or 90 days, and a single channel or all of them. They live in the URL
-  (`/?range=7&channel=email`), so any view can be linked.
+- **Filters**: 7, 30 or 90 days or custom dates, a single channel or all of them, a campaign, and
+  a comparison with the previous period. They live in the URL
+  (`/?from=2026-10-01&to=2026-10-14&channel=paid_social&campaign=fb_2&compare=prev`), so any view
+  can be linked. Every change is a history entry, so back and forward step through an analysis.
 - **Widgets**: KPI tiles (revenue against the prorated target, ad spend, ROAS, CAC, conversion
   rate, orders; with all channels selected, ROAS is _blended_), daily revenue against target and
   spend, daily revenue stacked by channel, and tables of channels, campaigns and the latest orders.
-  Select a channel row to focus the whole dashboard on it.
+- **Cross-filtering and drill-down**: click a channel's bars, legend entry or table row to focus
+  the whole dashboard on it, and a campaign row to narrow the orders to that campaign. A
+  breadcrumb (All channels › Paid social › Retargeting) leads back up.
+- **Zoom**: drag across the revenue chart to zoom into those days. The chip under the filters zooms
+  back out.
+- **Compare**: KPI tiles show the change against the previous period of the same length, colored
+  by whether it's good news (CAC going up isn't), and the revenue chart overlays the previous
+  period. Ratios compare range ratios built from totals, and a period with missing days shows no
+  change rather than a misleading one.
 - **Layout builder**: _Edit layout_ lets you drag widgets by their header, resize them from the
   corner, remove them, and add more from the widget library. Every change is a snapshot in an
   undo history (⌘Z / ⇧⌘Z, or Ctrl+Z / Ctrl+Y), and _Reset_ is undoable too. The layout saves to
