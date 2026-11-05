@@ -58,9 +58,13 @@ Free hosting changes a few things, on purpose:
 - **It sleeps after 15 minutes without traffic.** The first visit wakes it, which takes up to a
   minute, and the dashboard says so while it waits. The worker sleeps too, so scheduled
   ingests only run while the service is awake.
-- **The database starts empty**, and there's no shell to run `pnpm backfill`. With `SEED_DAYS=90`,
-  the worker queues 90 days of history at boot, but only when there are no reports yet, so a
-  restart never re-ingests the history.
+- **There's no shell to run `pnpm backfill`.** With `SEED_DAYS=90`, the worker keeps the last 90
+  days built: at boot it queues every day without a report from the current `DATA_VERSION`
+  (`packages/shared/src/dataVersion.ts`). The first boot seeds the empty database, and a change
+  that makes old data wrong bumps the version, so its deploy rebuilds the history. Finished days
+  are skipped, so a restart re-ingests nothing.
+- **Pushing to `main` deploys.** Render waits for CI to pass (`autoDeployTrigger: checksPass`),
+  and Vercel builds the dashboard from the same commit.
 - **Key Value is in-memory**, so a restart loses queued jobs. Nothing depends on them surviving:
   the schedule is re-created at boot, and re-ingesting a day is idempotent.
 

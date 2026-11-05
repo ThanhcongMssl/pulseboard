@@ -109,8 +109,11 @@ Health check: `curl localhost:4000/health` → `{"mongo":"ok","redis":"ok"}`. Re
 - Free hosting: Vercel (web), Render (`render.yaml`) and Atlas (see README "Hosted demo"). On
   Render the api and worker share one container (`Dockerfile` stage `all`, the last stage, run
   by `infra/start-all.mjs`), because the free tier has no background workers.
-- `SEED_DAYS` makes the worker queue history at boot only when `reports_daily` is empty. Keep
-  startup idempotent: free instances restart often and Key Value loses its data on restart.
+- Pushing to `main` deploys: Render once CI passes, Vercel on every push. There's no manual step.
+- `SEED_DAYS` makes the worker queue, at boot, every day in its window without a report from the
+  current `DATA_VERSION` (`packages/shared/src/dataVersion.ts`). **Bump it in any change that makes
+  existing history wrong** (attribution, KPI math, a new read model) so the next deploy re-seeds.
+  Keep startup idempotent: free instances restart often and Key Value loses its data on restart.
 
 ## Commits
 
