@@ -2,7 +2,7 @@
 
 import { ALL_CHANNELS, CHANNELS, type LayoutItem, type WidgetKind } from '@pulseboard/shared';
 import { Command } from 'cmdk';
-import { useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useState, type ReactNode, type RefObject } from 'react';
 import { CHANNEL_COLORS, CHANNEL_LABELS } from '../../lib/channels.ts';
 import {
   isPreset,
@@ -15,6 +15,7 @@ import { matchCommand } from '../../lib/palette.ts';
 import { addWidget, WIDGET_ORDER, WIDGETS } from '../../lib/widgets.ts';
 import { toggleTheme, useTheme } from '../useTheme.ts';
 import { useDashboard } from './DashboardContext.tsx';
+import { showPalette } from './showPalette.ts';
 import { useCampaigns } from './data.ts';
 
 interface Props {
@@ -41,16 +42,6 @@ const group =
 const Dot = ({ color }: { color: string }) => (
   <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ background: color }} />
 );
-
-/**
- * Open the palette with the search field focused. A modal dialog would focus
- * cmdk's root (it has tabindex -1) rather than the input, and React's
- * autoFocus only fires on mount, which happens while the dialog is closed.
- */
-export function showPalette(dialog: HTMLDialogElement | null) {
-  dialog?.showModal();
-  dialog?.querySelector<HTMLInputElement>('[cmdk-input]')?.focus();
-}
 
 /** A command: closes the palette, then runs. */
 function Item({
@@ -97,6 +88,8 @@ export function CommandPalette({
   const theme = useTheme();
   // A new session each time it opens, so the search starts empty.
   const [session, setSession] = useState(0);
+  // It loads on first use (see Dashboard), so it opens as soon as it mounts.
+  useEffect(() => showPalette(dialog.current), [dialog]);
 
   const placed = new Set(layout.items?.map((i) => i.kind));
   const missing: WidgetKind[] = WIDGET_ORDER.filter((k) => !placed.has(k));

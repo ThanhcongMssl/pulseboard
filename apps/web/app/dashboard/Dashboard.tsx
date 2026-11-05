@@ -1,6 +1,7 @@
 'use client';
 
 import { datesInRange } from '@pulseboard/shared';
+import dynamic from 'next/dynamic';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useRef, useState } from 'react';
 import { env } from '../../lib/env.ts';
@@ -22,8 +23,8 @@ import { LayoutToolbar } from './LayoutToolbar.tsx';
 import { LiveBadge } from './LiveBadge.tsx';
 import { ScopeBar } from './ScopeBar.tsx';
 import { StaleBanner } from './StaleBanner.tsx';
-import { CommandPalette, showPalette } from './CommandPalette.tsx';
 import { ShortcutHelp } from './ShortcutHelp.tsx';
+import { showPalette } from './showPalette.ts';
 import { ThemeToggle } from './ThemeToggle.tsx';
 import { Toast } from './Toast.tsx';
 import { useLiveQueries } from './useLiveQueries.ts';
@@ -32,6 +33,10 @@ import { useShortcuts } from './useShortcuts.ts';
 import { useIsMac } from '../useIsMac.ts';
 import { toggleTheme } from '../useTheme.ts';
 import { WidgetGrid } from './WidgetGrid.tsx';
+
+const CommandPalette = dynamic(() => import('./CommandPalette.tsx').then((m) => m.CommandPalette), {
+  ssr: false,
+});
 
 export function Dashboard() {
   const modKey = useIsMac() ? '⌘' : 'Ctrl ';
@@ -60,13 +65,19 @@ export function Dashboard() {
   );
   const help = useRef<HTMLDialogElement>(null);
   const palette = useRef<HTMLDialogElement>(null);
+  // The palette (cmdk) loads on first use, not with the page; it opens itself once loaded.
+  const [paletteLoaded, setPaletteLoaded] = useState(false);
+  const openPalette = () => {
+    if (palette.current) showPalette(palette.current);
+    else setPaletteLoaded(true);
+  };
   useShortcuts((action) => {
     // Read the filters from the URL, not this render: two quick presses can
     // land before React renders the first one's URL change.
     const filters = parseFilters(new URLSearchParams(window.location.search));
     switch (action.type) {
       case 'palette':
-        return showPalette(palette.current);
+        return openPalette();
       case 'help':
         return help.current?.showModal();
       case 'range':
@@ -99,7 +110,7 @@ export function Dashboard() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => showPalette(palette.current)}
+              onClick={openPalette}
               className="hidden items-center gap-2 rounded-full border border-line bg-raised py-1 pr-1.5 pl-3 text-sm text-ink-secondary hover:bg-line md:inline-flex"
             >
               Search
@@ -188,13 +199,15 @@ export function Dashboard() {
       </div>
       <Toast update={live.update} />
       <ShortcutHelp dialog={help} />
-      <CommandPalette
-        dialog={palette}
-        layout={layout}
-        editing={editing}
-        onToggleEditing={() => setEditing((e) => !e)}
-        onShowShortcuts={() => help.current?.showModal()}
-      />
+      {paletteLoaded && (
+        <CommandPalette
+          dialog={palette}
+          layout={layout}
+          editing={editing}
+          onToggleEditing={() => setEditing((e) => !e)}
+          onShowShortcuts={() => help.current?.showModal()}
+        />
+      )}
     </DashboardProvider>
   );
 }
