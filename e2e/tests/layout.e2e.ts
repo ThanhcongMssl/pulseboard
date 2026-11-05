@@ -24,6 +24,48 @@ test.describe('layout builder', () => {
       .toBeLessThan(before.x - 300);
   });
 
+  // Between snapped grid steps the placeholder stays put, but the widget must
+  // keep following the pointer (react-grid-layout 2.3.0 froze it; see the patch).
+  test('a dragged or resized widget follows the pointer between grid steps', async ({ page }) => {
+    await openDashboard(page);
+    await page.getByRole('button', { name: 'Edit layout' }).click();
+    // Measure where things are, not where they're animating to.
+    await page.addStyleTag({ content: '.react-grid-item { transition: none !important; }' });
+    const mix = widget(page, 'Revenue by channel');
+    const placeholder = page.locator('.react-grid-placeholder');
+    const box = async (l: typeof mix) => (await l.boundingBox())!;
+
+    const grip = await box(mix.locator('.widget-drag-handle'));
+    const x = grip.x + 40;
+    const y = grip.y + 10;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x - 6, y + 6); // past the drag threshold
+    const start = await box(mix);
+    const snapped = await box(placeholder);
+    for (const d of [8, 16, 24]) {
+      await page.mouse.move(x - 6 - d, y + 6 + d);
+      await expect.poll(async () => (await box(mix)).x).toBeCloseTo(start.x - d, 0);
+      expect((await box(mix)).y).toBeCloseTo(start.y + d, 0);
+      expect(await box(placeholder)).toEqual(snapped);
+    }
+    await page.mouse.up();
+    await expect(placeholder).toHaveCount(0);
+
+    const before = await box(mix);
+    const corner = await box(mix.locator('.react-resizable-handle-se'));
+    const cx = corner.x + corner.width / 2;
+    const cy = corner.y + corner.height / 2;
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    for (const d of [8, 16, 24]) {
+      await page.mouse.move(cx - d, cy + d);
+      await expect.poll(async () => (await box(mix)).width).toBeCloseTo(before.width - d, 0);
+      expect((await box(mix)).height).toBeCloseTo(before.height + d, 0);
+    }
+    await page.mouse.up();
+  });
+
   test('keyboard moves are announced, and undo and redo walk them', async ({ page }) => {
     await openDashboard(page);
     await page.keyboard.press('e');

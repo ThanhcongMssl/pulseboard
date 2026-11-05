@@ -162,6 +162,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  react-grid-layout@2.3.0: 1bd38b61e3dbce8c938284255c8bd7b8c7df121ee220c20457e10331ad77303e
+
 importers:
 
   .:
@@ -253,7 +256,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       react-grid-layout:
         specifier: ^2.3.0
-        version: 2.3.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 2.3.0(patch_hash=1bd38b61e3dbce8c938284255c8bd7b8c7df121ee220c20457e10331ad77303e)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react-is:
         specifier: ^19.3.1
         version: 19.3.1
@@ -6336,7 +6339,7 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  react-grid-layout@2.3.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+  react-grid-layout@2.3.0(patch_hash=1bd38b61e3dbce8c938284255c8bd7b8c7df121ee220c20457e10331ad77303e)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:
       clsx: 2.1.1
       fast-equals: 4.0.3

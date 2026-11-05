@@ -7,3 +7,10 @@ packages:
 allowBuilds:
   esbuild: true
   msgpackr-extract: false
+
+# react-grid-layout 2.3.0 freezes a dragged or resized widget between grid steps
+# (#2303). This ports the merged fix (#2304); drop it once a release ships it.
+patchedDependencies:
+  react-grid-layout@2.3.0: patches/react-grid-layout@2.3.0.patch
+# The api and worker images (`pnpm deploy`) don't include the web app's packages.
+allowUnusedPatches: true

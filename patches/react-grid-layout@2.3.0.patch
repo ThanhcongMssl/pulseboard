@@ -1,0 +1,80 @@
+diff --git a/dist/chunk-CUP5Y2ZG.js b/dist/chunk-CUP5Y2ZG.js
+index 23399caefebeefb2038279331382aa20e5932bc1..edd58ab8c6d0e53c37b8acba03dde5e00bd4bb83 100644
+--- a/dist/chunk-CUP5Y2ZG.js
++++ b/dist/chunk-CUP5Y2ZG.js
+@@ -125,6 +125,9 @@ function GridItemInner(props) {
+   } = props;
+   const [dragging, setDragging] = React2.useState(false);
+   const [resizing, setResizing] = React2.useState(false);
++  // Patched from react-grid-layout#2304 (#2303): a ref change alone does not
++  // render a memoized item between snapped grid steps.
++  const [, setInteractionRevision] = React2.useState(0);
+   const elementRef = React2.useRef(null);
+   const dragPositionRef = React2.useRef({ left: 0, top: 0 });
+   const resizePositionRef = React2.useRef({
+@@ -334,6 +337,7 @@ function GridItemInner(props) {
+       }
+       const newPosition = { top, left };
+       dragPositionRef.current = newPosition;
++      setInteractionRevision((revision) => revision + 1);
+       const rawPos = chunkVJJIA3HC_js.calcXYRaw(positionParams, top, left);
+       const { x: newX, y: newY } = chunkQAIA5KAO_js.applyPositionConstraints(
+         constraints,
+@@ -430,6 +434,9 @@ function GridItemInner(props) {
+         };
+       }
+       resizePositionRef.current = updatedSize;
++      if (handlerName === "onResize" && resizing) {
++        setInteractionRevision((revision) => revision + 1);
++      }
+       const containerHeight = node?.offsetParent?.clientHeight ?? 0;
+       const rawSize = chunkVJJIA3HC_js.calcWHRaw(
+         positionParams,
+@@ -459,6 +466,7 @@ function GridItemInner(props) {
+       onResizeStartProp,
+       onResizeProp,
+       onResizeStopProp,
++      resizing,
+       containerWidth,
+       positionParams,
+       i,
+diff --git a/dist/chunk-Z6CWRR74.mjs b/dist/chunk-Z6CWRR74.mjs
+index 5d3ee00ad7b14cfe15445fcf7bfdbee04408236e..23f19a4b4f5f685160c7e5a48d99c30bf481b721 100644
+--- a/dist/chunk-Z6CWRR74.mjs
++++ b/dist/chunk-Z6CWRR74.mjs
+@@ -118,6 +118,9 @@ function GridItemInner(props) {
+   } = props;
+   const [dragging, setDragging] = useState(false);
+   const [resizing, setResizing] = useState(false);
++  // Patched from react-grid-layout#2304 (#2303): a ref change alone does not
++  // render a memoized item between snapped grid steps.
++  const [, setInteractionRevision] = useState(0);
+   const elementRef = useRef(null);
+   const dragPositionRef = useRef({ left: 0, top: 0 });
+   const resizePositionRef = useRef({
+@@ -327,6 +330,7 @@ function GridItemInner(props) {
+       }
+       const newPosition = { top, left };
+       dragPositionRef.current = newPosition;
++      setInteractionRevision((revision) => revision + 1);
+       const rawPos = calcXYRaw(positionParams, top, left);
+       const { x: newX, y: newY } = applyPositionConstraints(
+         constraints,
+@@ -423,6 +427,9 @@ function GridItemInner(props) {
+         };
+       }
+       resizePositionRef.current = updatedSize;
++      if (handlerName === "onResize" && resizing) {
++        setInteractionRevision((revision) => revision + 1);
++      }
+       const containerHeight = node?.offsetParent?.clientHeight ?? 0;
+       const rawSize = calcWHRaw(
+         positionParams,
+@@ -452,6 +459,7 @@ function GridItemInner(props) {
+       onResizeStartProp,
+       onResizeProp,
+       onResizeStopProp,
++      resizing,
+       containerWidth,
+       positionParams,
+       i,
