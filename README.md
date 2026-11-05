@@ -327,6 +327,11 @@ packages/connectors The Connector interface and the five simulated sources
   The demo GIF above is recorded the same way: `pnpm --filter @pulseboard/e2e demo:gif` plays a
   scripted tour, screenshots it and encodes `docs/demo.gif` (pure JS, no ffmpeg; only the pixels
   that changed are stored per frame).
-- **CI** runs format, lint, typecheck, tests and builds on every push. A second job builds the
+- **Storybook (`apps/web/stories`):** the real widgets (KPI tiles with and without deltas, both
+  charts, the tables, the virtualized orders table), the loading, empty and error states, the
+  toast, the shortcut help and the command palette, in light and dark. Stories render from a
+  query cache seeded with deterministic fixtures, so they never call the API. Run
+  `pnpm --filter @pulseboard/web storybook`.
+- **CI** runs format, lint, typecheck, tests, builds and the Storybook build on every push. A second job builds the
   Docker images, boots the full stack, backfills a week, checks that `/reports` returns it, and
   runs the end-to-end suite against it (the HTML report is uploaded when it fails).

@@ -31,6 +31,7 @@ pnpm dev              # api :4000, worker, web :3000
 pnpm backfill [days]  # queue ingest flows for the last N days (default 30); worker must run
 pnpm lint && pnpm typecheck && pnpm test   # run all three before every commit
 pnpm e2e             # Playwright against the running stack (pnpm dev + a backfill)
+pnpm --filter @pulseboard/web storybook   # component stories on :6006 (fixtures, no API)
 pnpm format           # prettier --write
 pnpm build            # tsup bundles for api/worker, next build for web
 

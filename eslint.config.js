@@ -4,7 +4,16 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/node_modules/', '**/dist/', '**/.next/', '**/coverage/', '**/next-env.d.ts'],
+    ignores: [
+      '**/node_modules/',
+      '**/dist/',
+      '**/.next/',
+      '**/coverage/',
+      '**/next-env.d.ts',
+      '**/storybook-static/',
+      '**/playwright-report/',
+      '**/test-results/',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

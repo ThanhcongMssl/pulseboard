@@ -29,6 +29,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      # Every story renders a real component from fixtures; a broken one fails the build.
+      - run: pnpm --filter @pulseboard/web build-storybook
 
   # End to end: build the images, boot the stack (replica set included), run a
   # backfill through ingest and aggregate, read the reports back, then drive
