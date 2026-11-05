@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { reportsQuerySchema, summarizeReports } from './api.ts';
+import {
+  ordersQuerySchema,
+  reportsQuerySchema,
+  summarizeCampaigns,
+  summarizeReports,
+} from './api.ts';
 import { reportsUpdatedEventSchema } from './queues.ts';
 
 describe('reportsQuerySchema', () => {
@@ -98,4 +103,75 @@ describe('reportsUpdatedEventSchema', () => {
   it('rejects other shapes', () => {
     expect(reportsUpdatedEventSchema.safeParse({ type: 'hello' }).success).toBe(false);
   });
+});
+
+describe('summarizeCampaigns', () => {
+  const day = (campaignId: string, spend: number, revenue: number, campaignName = campaignId) => ({
+    campaignId,
+    campaignName,
+    channel: 'paid_search' as const,
+    spend,
+    impressions: spend * 10,
+    clicks: spend / 10,
+    orders: revenue / 1_000,
+    revenue,
+    newCustomers: revenue / 2_000,
+  });
+
+  it('sums each campaign, derives ratios from totals, and sorts by spend', () => {
+    const [big, small, ...rest] = summarizeCampaigns([
+      day('gads_2', 100, 4_000),
+      day('gads_1', 1_000, 1_000),
+      day('gads_1', 1_000, 5_000),
+    ]);
+    expect(rest).toEqual([]);
+    expect(big).toMatchObject({
+      campaignId: 'gads_1',
+      spend: 2_000,
+      revenue: 6_000,
+      roas: 3,
+      cac: Math.round(2_000 / 3),
+      ctr: 0.01,
+    });
+    expect(small).toMatchObject({ campaignId: 'gads_2', spend: 100, roas: 40 });
+  });
+
+  it("uses the latest day's name", () => {
+    const [campaign] = summarizeCampaigns([
+      day('fb_1', 10, 0, 'Old name'),
+      day('fb_1', 10, 0, 'New name'),
+    ]);
+    expect(campaign).toMatchObject({ campaignName: 'New name', roas: 0, cac: null });
+  });
+});
+
+describe('ordersQuerySchema', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-29T12:00:00Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('defaults to the newest 100 orders of the last 30 days', () => {
+    expect(ordersQuerySchema.parse({})).toEqual({
+      from: '2026-09-30',
+      to: '2026-10-29',
+      sort: 'date',
+      dir: 'desc',
+      limit: 100,
+    });
+  });
+
+  it('coerces limit from the query string and caps it at 200', () => {
+    expect(ordersQuerySchema.parse({ limit: '50' }).limit).toBe(50);
+    expect(ordersQuerySchema.safeParse({ limit: '201' }).success).toBe(false);
+    expect(ordersQuerySchema.safeParse({ limit: '0' }).success).toBe(false);
+  });
+
+  it.each([{ sort: 'orderId' }, { dir: 'up' }, { channel: 'all' }, { from: '2026-11-01' }])(
+    'rejects %o',
+    (query) => {
+      expect(ordersQuerySchema.safeParse(query).success).toBe(false);
+    },
+  );
 });

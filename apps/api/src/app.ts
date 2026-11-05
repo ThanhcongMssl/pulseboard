@@ -2,6 +2,8 @@ import express, { type ErrorRequestHandler } from 'express';
 import type { Db } from '@pulseboard/db';
 import type { Redis } from 'ioredis';
 import { cors } from './cors.ts';
+import { campaignsRouter } from './routes/campaigns.ts';
+import { ordersRouter } from './routes/orders.ts';
 import { reportsRouter } from './routes/reports.ts';
 import { statusRouter } from './routes/status.ts';
 
@@ -42,6 +44,8 @@ export function createApp({ db, redis, webOrigin }: AppDeps) {
   });
 
   app.use(reportsRouter(db));
+  app.use(campaignsRouter(db));
+  app.use(ordersRouter(db));
   app.use(statusRouter(db));
 
   app.use((_req, res) => {

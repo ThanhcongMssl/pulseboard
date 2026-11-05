@@ -20,6 +20,13 @@ export async function ensureIndexes(db: Db): Promise<void> {
 
     c.rawOrders.createIndex({ source: 1, orderId: 1 }, { unique: true }),
     c.rawOrders.createIndex({ date: 1, channel: 1 }),
+    // GET /orders pages through a range by (sort field, _id), walking the
+    // index in either direction; equality filters (channel, campaign) lead.
+    c.rawOrders.createIndex({ date: 1, _id: 1 }),
+    c.rawOrders.createIndex({ channel: 1, date: 1, _id: 1 }),
+    c.rawOrders.createIndex({ campaignId: 1, date: 1, _id: 1 }),
+    c.rawOrders.createIndex({ revenue: 1, _id: 1 }),
+    c.rawOrders.createIndex({ channel: 1, revenue: 1, _id: 1 }),
 
     c.rawTargets.createIndex({ month: 1, channel: 1 }, { unique: true }),
 
