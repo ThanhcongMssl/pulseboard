@@ -29,6 +29,10 @@ export async function ensureIndexes(db: Db): Promise<void> {
     // Freshness: the latest rebuild across all days.
     c.reportsDaily.createIndex({ computedAt: -1 }),
 
+    // The aggregate replaces a day's campaigns; /campaigns reads a range, maybe one channel.
+    c.reportsCampaignDaily.createIndex({ date: 1, campaignId: 1 }, { unique: true }),
+    c.reportsCampaignDaily.createIndex({ channel: 1, date: 1 }),
+
     // One doc per job attempt; a restarted attempt overwrites its own doc.
     c.ingestRuns.createIndex({ jobId: 1, attempt: 1 }, { unique: true }),
     c.ingestRuns.createIndex({ source: 1, date: 1, startedAt: -1 }),

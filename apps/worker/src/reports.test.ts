@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { CHANNELS, reportDailySchema, type RawTarget } from '@pulseboard/shared';
-import { buildDailyReports, type DayInputs } from './reports.ts';
+import {
+  CHANNELS,
+  reportCampaignDailySchema,
+  reportDailySchema,
+  type RawTarget,
+} from '@pulseboard/shared';
+import { buildCampaignReports, buildDailyReports, type DayInputs } from './reports.ts';
 
 const computedAt = new Date('2026-10-29T12:00:00Z');
 
@@ -107,6 +112,75 @@ describe('buildDailyReports', () => {
     const docs = buildDailyReports(inputs({ staleSources: ['ga4'] }));
     expect(docs.every((d) => d.staleSources.length === 1 && d.staleSources[0] === 'ga4')).toBe(
       true,
+    );
+  });
+});
+
+describe('buildCampaignReports', () => {
+  const spend = (campaignId: string, amount: number) => ({
+    campaignId,
+    campaignName: `Campaign ${campaignId}`,
+    channel: 'paid_search' as const,
+    spend: amount,
+    impressions: amount * 10,
+    clicks: amount / 10,
+  });
+  const orders = (campaignId: string, n: number, revenue: number) => ({
+    campaignId,
+    channel: 'paid_search' as const,
+    orders: n,
+    revenue,
+    newCustomers: n / 2,
+  });
+
+  it('joins delivery and attributed orders per campaign, with KPIs', () => {
+    const [doc, ...rest] = buildCampaignReports({
+      date: '2026-10-29',
+      spend: [spend('gads_1', 1_000)],
+      orders: [orders('gads_1', 4, 5_000)],
+      computedAt,
+    });
+    expect(rest).toEqual([]);
+    expect(reportCampaignDailySchema.parse(doc)).toEqual({
+      _id: '2026-10-29:gads_1',
+      date: '2026-10-29',
+      channel: 'paid_search',
+      campaignId: 'gads_1',
+      campaignName: 'Campaign gads_1',
+      spend: 1_000,
+      impressions: 10_000,
+      clicks: 100,
+      orders: 4,
+      revenue: 5_000,
+      newCustomers: 2,
+      roas: 5,
+      cac: 500,
+      ctr: 0.01,
+      computedAt,
+    });
+  });
+
+  it('keeps campaigns that spent without orders, and orders without a spend row', () => {
+    const docs = buildCampaignReports({
+      date: '2026-10-29',
+      spend: [spend('gads_2', 1_000)],
+      orders: [orders('gads_3', 2, 3_000)],
+      computedAt,
+    });
+    expect(docs.map((d) => d.campaignId)).toEqual(['gads_2', 'gads_3']);
+    expect(docs[0]).toMatchObject({ orders: 0, revenue: 0, roas: 0, cac: null });
+    expect(docs[1]).toMatchObject({
+      campaignName: 'gads_3',
+      spend: 0,
+      revenue: 3_000,
+      roas: null,
+      ctr: null,
+    });
+  });
+
+  it('returns nothing for a day without paid activity', () => {
+    expect(buildCampaignReports({ date: '2026-10-29', spend: [], orders: [], computedAt })).toEqual(
+      [],
     );
   });
 });

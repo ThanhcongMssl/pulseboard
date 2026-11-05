@@ -20,3 +20,6 @@ export const cac = (spendCents: number, newCustomers: number) => {
 
 /** Conversion rate: orders / sessions, as a fraction (0.025 = 2.5%). */
 export const conversionRate = (orders: number, sessions: number) => ratio(orders, sessions);
+
+/** Click-through rate: clicks / impressions, as a fraction. */
+export const ctr = (clicks: number, impressions: number) => ratio(clicks, impressions);

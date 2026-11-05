@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cac, conversionRate, roas } from './kpi.ts';
+import { cac, conversionRate, ctr, roas } from './kpi.ts';
 
 describe('roas', () => {
   it('divides revenue by spend', () => {
@@ -30,6 +30,16 @@ describe('cac', () => {
 
   it('is null without spend: unpaid customers have no acquisition cost', () => {
     expect(cac(0, 12)).toBeNull();
+  });
+});
+
+describe('ctr', () => {
+  it('divides clicks by impressions', () => {
+    expect(ctr(15, 1_000)).toBe(0.015);
+  });
+
+  it('is null without impressions', () => {
+    expect(ctr(0, 0)).toBeNull();
   });
 });
 

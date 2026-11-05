@@ -9,16 +9,25 @@ import {
   type Channel,
   type IsoDate,
   type RawTarget,
+  type ReportCampaignDaily,
   type ReportDaily,
   type ReportsUpdatedEvent,
   type Source,
 } from '@pulseboard/shared';
 import { ingestJobId } from './flows.ts';
-import { buildDailyReports, type ChannelSums } from './reports.ts';
+import {
+  buildCampaignReports,
+  buildDailyReports,
+  type CampaignOrders,
+  type CampaignSpend,
+  type ChannelSums,
+} from './reports.ts';
 
 interface DayRawData {
   sums: Partial<Record<Channel, ChannelSums>>;
   targets: RawTarget[];
+  campaignSpend: CampaignSpend[];
+  campaignOrders: CampaignOrders[];
 }
 
 /**
@@ -62,6 +71,45 @@ export async function readDay(db: Db, date: IsoDate): Promise<DayRawData> {
     const targets = await c.rawTargets
       .find({ month: monthOf(date) }, { session, projection: { _id: 0 } })
       .toArray();
+    const campaignSpend = await c.rawAdSpend
+      .aggregate<CampaignSpend>(
+        [
+          { $match: { date } },
+          {
+            $group: {
+              _id: '$campaignId',
+              campaignName: { $first: '$campaignName' },
+              channel: { $first: '$channel' },
+              spend: { $sum: '$spend' },
+              impressions: { $sum: '$impressions' },
+              clicks: { $sum: '$clicks' },
+            },
+          },
+          { $set: { campaignId: '$_id' } },
+          { $unset: '_id' },
+        ],
+        { session },
+      )
+      .toArray();
+    const campaignOrders = await c.rawOrders
+      .aggregate<CampaignOrders>(
+        [
+          { $match: { date, campaignId: { $ne: null } } },
+          {
+            $group: {
+              _id: '$campaignId',
+              channel: { $first: '$channel' },
+              orders: { $sum: 1 },
+              revenue: { $sum: '$revenue' },
+              newCustomers: { $sum: { $cond: ['$isNewCustomer', 1, 0] } },
+            },
+          },
+          { $set: { campaignId: '$_id' } },
+          { $unset: '_id' },
+        ],
+        { session },
+      )
+      .toArray();
 
     const sums: Partial<Record<Channel, ChannelSums>> = {};
     const at = (channel: Channel) =>
@@ -69,7 +117,7 @@ export async function readDay(db: Db, date: IsoDate): Promise<DayRawData> {
     for (const row of spend) at(row._id).spend = row.spend;
     for (const row of traffic) at(row._id).sessions = row.sessions;
     for (const { _id, ...row } of orders) Object.assign(at(_id), row);
-    return { sums, targets };
+    return { sums, targets, campaignSpend, campaignOrders };
   } finally {
     await session.endSession();
   }
@@ -77,20 +125,30 @@ export async function readDay(db: Db, date: IsoDate): Promise<DayRawData> {
 
 /**
  * Replace the day's reports in one transaction, so a reader never sees new
- * channel rows next to an old totals row. withTransaction retries transient
- * errors such as write conflicts.
+ * channel rows next to an old totals row, or campaigns that disagree with
+ * their channel. Campaigns are deleted and reinserted: one that stopped
+ * spending must not linger. withTransaction retries transient errors such as
+ * write conflicts.
  */
-export async function writeReports(db: Db, docs: ReportDaily[]): Promise<void> {
+export async function writeReports(
+  db: Db,
+  date: IsoDate,
+  daily: ReportDaily[],
+  campaigns: ReportCampaignDaily[],
+): Promise<void> {
+  const c = collections(db);
   const session = db.client.startSession();
   try {
-    await session.withTransaction(() =>
-      collections(db).reportsDaily.bulkWrite(
-        docs.map((doc) => ({
+    await session.withTransaction(async () => {
+      await c.reportsDaily.bulkWrite(
+        daily.map((doc) => ({
           replaceOne: { filter: { _id: doc._id }, replacement: doc, upsert: true },
         })),
         { session },
-      ),
-    );
+      );
+      await c.reportsCampaignDaily.deleteMany({ date }, { session });
+      if (campaigns.length) await c.reportsCampaignDaily.insertMany(campaigns, { session });
+    });
   } finally {
     await session.endSession();
   }
@@ -113,7 +171,7 @@ async function staleSourcesOf(job: Job<AggregateJobData>): Promise<Source[]> {
 
 /**
  * BullMQ processor for a day's flow parent. Runs once every ingest child has
- * finished (or given up): rebuilds reports_daily for the date, then tells the
+ * finished (or given up): rebuilds the date's daily and campaign reports, then tells the
  * API over Redis pub/sub so dashboards refetch.
  */
 export const aggregateProcessor =
@@ -123,13 +181,15 @@ export const aggregateProcessor =
     const staleSources = await staleSourcesOf(job);
     const computedAt = new Date();
 
-    const docs = buildDailyReports({
+    const { campaignSpend, campaignOrders, ...day } = await readDay(db, date);
+    const docs = buildDailyReports({ date, ...day, staleSources, computedAt });
+    const campaigns = buildCampaignReports({
       date,
-      ...(await readDay(db, date)),
-      staleSources,
+      spend: campaignSpend,
+      orders: campaignOrders,
       computedAt,
     });
-    await writeReports(db, docs);
+    await writeReports(db, date, docs, campaigns);
 
     const event: ReportsUpdatedEvent = {
       type: 'reports.updated',
@@ -140,6 +200,8 @@ export const aggregateProcessor =
     await redis.publish(REPORTS_UPDATED_CHANNEL, JSON.stringify(event));
 
     const stale = staleSources.length ? ` (stale: ${staleSources.join(', ')})` : '';
-    console.log(`aggregate ${date}: ${docs.length} reports written${stale}`);
+    console.log(
+      `aggregate ${date}: ${docs.length} reports, ${campaigns.length} campaigns written${stale}`,
+    );
     return { date, staleSources };
   };

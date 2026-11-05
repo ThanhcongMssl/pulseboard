@@ -3,6 +3,7 @@ import {
   cac,
   CHANNELS,
   conversionRate,
+  ctr,
   daysInMonth,
   monthOf,
   reportId,
@@ -10,6 +11,7 @@ import {
   type Channel,
   type IsoDate,
   type RawTarget,
+  type ReportCampaignDaily,
   type ReportChannel,
   type ReportDaily,
   type Source,
@@ -100,4 +102,75 @@ export function buildDailyReports({
     : null;
 
   return [...channelReports, report(ALL_CHANNELS, totals, totalTarget)];
+}
+
+/** One campaign's ad delivery for a day, summed from raw_ad_spend. */
+export interface CampaignSpend {
+  campaignId: string;
+  campaignName: string;
+  channel: Channel;
+  spend: number;
+  impressions: number;
+  clicks: number;
+}
+
+/** The orders attributed to one campaign on a day, summed from raw_orders. */
+export interface CampaignOrders {
+  campaignId: string;
+  channel: Channel;
+  orders: number;
+  revenue: number;
+  newCustomers: number;
+}
+
+export interface CampaignDayInputs {
+  date: IsoDate;
+  spend: readonly CampaignSpend[];
+  orders: readonly CampaignOrders[];
+  computedAt: Date;
+}
+
+/**
+ * The day's reports_campaign_daily docs, sorted by campaign id: every
+ * campaign that spent or was credited with an order. A campaign with orders
+ * but no spend row (an ad platform that failed to ingest) still reports its
+ * orders, with zero spend and its id as the name.
+ */
+export function buildCampaignReports({
+  date,
+  spend,
+  orders,
+  computedAt,
+}: CampaignDayInputs): ReportCampaignDaily[] {
+  const spendById = new Map(spend.map((s) => [s.campaignId, s]));
+  const ordersById = new Map(orders.map((o) => [o.campaignId, o]));
+  const ids = [...new Set([...spendById.keys(), ...ordersById.keys()])].sort();
+
+  return ids.map((campaignId) => {
+    const s = spendById.get(campaignId);
+    const o = ordersById.get(campaignId);
+    const delivery = {
+      spend: s?.spend ?? 0,
+      impressions: s?.impressions ?? 0,
+      clicks: s?.clicks ?? 0,
+    };
+    const sales = {
+      orders: o?.orders ?? 0,
+      revenue: o?.revenue ?? 0,
+      newCustomers: o?.newCustomers ?? 0,
+    };
+    return {
+      _id: reportId(date, campaignId),
+      date,
+      channel: (s ?? o)!.channel,
+      campaignId,
+      campaignName: s?.campaignName ?? campaignId,
+      ...delivery,
+      ...sales,
+      roas: roas(sales.revenue, delivery.spend),
+      cac: cac(delivery.spend, sales.newCustomers),
+      ctr: ctr(delivery.clicks, delivery.impressions),
+      computedAt,
+    };
+  });
 }
