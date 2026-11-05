@@ -39,7 +39,7 @@ describe('addWidget / removeWidget', () => {
       id: 'table.orders',
       kind: 'table.orders',
       x: 0,
-      y: 30,
+      y: 31,
       w: 12,
       h: 10,
     });
@@ -47,7 +47,7 @@ describe('addWidget / removeWidget', () => {
 
   it('adds to an empty dashboard at the top', () => {
     expect(addWidget([], 'kpi.roas')).toEqual([
-      { id: 'kpi.roas', kind: 'kpi.roas', x: 0, y: 0, w: 2, h: 3 },
+      { id: 'kpi.roas', kind: 'kpi.roas', x: 0, y: 0, w: 2, h: 4 },
     ]);
   });
 
@@ -65,7 +65,7 @@ describe('addWidget / removeWidget', () => {
 describe('toGrid / fromGrid', () => {
   it('round-trips geometry and carries minimum sizes to the grid', () => {
     const grid = toGrid(DEFAULT_LAYOUT);
-    expect(grid[0]).toEqual({ i: 'kpi.revenue', x: 0, y: 0, w: 2, h: 3, minW: 2, minH: 3 });
+    expect(grid[0]).toEqual({ i: 'kpi.revenue', x: 0, y: 0, w: 2, h: 4, minW: 2, minH: 3 });
     expect(fromGrid(DEFAULT_LAYOUT, grid)).toEqual(DEFAULT_LAYOUT);
   });
 
@@ -86,7 +86,7 @@ describe('toGrid / fromGrid', () => {
 describe('sameLayout', () => {
   it('ignores item order but not geometry', () => {
     expect(sameLayout(DEFAULT_LAYOUT, [...DEFAULT_LAYOUT].reverse())).toBe(true);
-    const moved = fromGrid(DEFAULT_LAYOUT, [{ i: 'kpi.spend', x: 2, y: 1, w: 2, h: 3 }]);
+    const moved = fromGrid(DEFAULT_LAYOUT, [{ i: 'kpi.spend', x: 2, y: 1, w: 2, h: 4 }]);
     expect(sameLayout(DEFAULT_LAYOUT, moved)).toBe(false);
     expect(sameLayout(DEFAULT_LAYOUT, DEFAULT_LAYOUT.slice(1))).toBe(false);
   });

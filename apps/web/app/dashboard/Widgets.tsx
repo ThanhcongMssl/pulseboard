@@ -7,9 +7,9 @@ import {
   type WidgetKind,
 } from '@pulseboard/shared';
 import { useContext, useMemo, type ReactNode } from 'react';
-import { CHANNEL_LABELS } from '../../lib/channels.ts';
+import { CHANNEL_COLORS, CHANNEL_LABELS } from '../../lib/channels.ts';
 import { toggleCampaign, toggleChannel, withRange } from '../../lib/filters.ts';
-import { isKpi, kpiTile, type KpiKind } from '../../lib/kpis.ts';
+import { isKpi, kpiSeries, kpiTile, type KpiKind } from '../../lib/kpis.ts';
 import {
   coversRange,
   describeDelta,
@@ -27,6 +27,8 @@ import { useCampaignNames, useCampaigns, useLatestOrders, useReports } from './d
 import { OrdersTable } from './OrdersTable.tsx';
 import { DRAG_HANDLE, DragGrip, Panel, RemoveButton, WidgetChromeContext } from './Panel.tsx';
 import { RevenueChart } from './RevenueChart.tsx';
+import { Sparkline } from './Sparkline.tsx';
+import { useTweenedNumber } from './useTweenedNumber.ts';
 
 /** The paid channel to narrow campaigns and orders to, or null for all of them. */
 const asChannel = (channel: ReportChannel): Channel | null => (channel === 'all' ? null : channel);
@@ -52,7 +54,7 @@ function usePreviousPeriod() {
 }
 
 function KpiWidget({ kind }: { kind: KpiKind }) {
-  const { filters, range } = useDashboard();
+  const { filters, range, dates } = useDashboard();
   const { data } = useReports(range);
   const chrome = useContext(WidgetChromeContext);
   const { channel } = filters;
@@ -61,6 +63,11 @@ function KpiWidget({ kind }: { kind: KpiKind }) {
     [data, kind, channel],
   );
   const tile = kpiTile(kind, channel, data?.summary[channel], pacing);
+  const shown = useTweenedNumber(tile.raw);
+  const trend = useMemo(
+    () => kpiSeries(kind, data?.reports ?? [], channel, dates),
+    [kind, data, channel, dates],
+  );
   const previous = usePreviousPeriod();
   const delta =
     previous && coversRange(previous.reports, channel, previous.range)
@@ -83,7 +90,9 @@ function KpiWidget({ kind }: { kind: KpiKind }) {
         {chrome && <RemoveButton chrome={chrome} className="-my-0.5" />}
       </div>
       <p className="mt-1 flex items-baseline gap-2">
-        <span className="text-2xl font-semibold tracking-tight">{tile.value}</span>
+        <span className="text-2xl font-semibold tracking-tight tabular-nums">
+          {shown === null ? tile.value : tile.format(shown)}
+        </span>
         {said && (
           <span
             className={`text-xs font-medium whitespace-nowrap ${TONE[delta!.tone]}`}
@@ -95,6 +104,12 @@ function KpiWidget({ kind }: { kind: KpiKind }) {
         )}
       </p>
       <p className="mt-1 truncate text-xs text-muted">{tile.caption}</p>
+      <div className="mt-2 min-h-0 flex-1">
+        <Sparkline
+          values={trend}
+          color={channel === 'all' ? 'var(--ink-muted)' : CHANNEL_COLORS[channel]}
+        />
+      </div>
     </section>
   );
 }

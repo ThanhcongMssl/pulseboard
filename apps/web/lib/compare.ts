@@ -7,7 +7,7 @@ import {
   type ReportDailyJson,
 } from '@pulseboard/shared';
 import { formatPercent } from './format.ts';
-import type { KpiKind } from './kpis.ts';
+import { KPI_FIELD, type KpiKind } from './kpis.ts';
 import type { DailyPoint } from './series.ts';
 
 // "Compare with the previous period": the range before the one on screen, and
@@ -34,14 +34,14 @@ export function coversRange(
 
 type Better = 'up' | 'down' | null;
 
-/** Which summary field each tile shows, and which way is good news (null: neither). */
-const METRICS: Record<KpiKind, { field: keyof RangeSummary; better: Better }> = {
-  'kpi.revenue': { field: 'revenue', better: 'up' },
-  'kpi.spend': { field: 'spend', better: null },
-  'kpi.roas': { field: 'roas', better: 'up' },
-  'kpi.cac': { field: 'cac', better: 'down' },
-  'kpi.conversionRate': { field: 'conversionRate', better: 'up' },
-  'kpi.orders': { field: 'orders', better: 'up' },
+/** Which way is good news for each tile (null: neither). */
+const BETTER: Record<KpiKind, Better> = {
+  'kpi.revenue': 'up',
+  'kpi.spend': null,
+  'kpi.roas': 'up',
+  'kpi.cac': 'down',
+  'kpi.conversionRate': 'up',
+  'kpi.orders': 'up',
 };
 
 export interface Delta {
@@ -64,7 +64,8 @@ export function kpiDelta(
   current: RangeSummary | undefined,
   previous: RangeSummary | undefined,
 ): Delta | null {
-  const { field, better } = METRICS[kind];
+  const field = KPI_FIELD[kind];
+  const better = BETTER[kind];
   const now = current?.[field];
   const before = previous?.[field];
   if (now === null || now === undefined || !before) return null;

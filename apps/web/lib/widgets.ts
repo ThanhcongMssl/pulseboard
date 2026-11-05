@@ -13,11 +13,13 @@ export interface WidgetSpec {
   minH: number;
 }
 
+// Four rows fit the value, its caption and a sparkline; at the minimum of
+// three (layouts saved before sparklines) the sparkline just gets less room.
 const kpi = (title: string, description: string): WidgetSpec => ({
   title,
   description,
   w: 2,
-  h: 3,
+  h: 4,
   minW: 2,
   minH: 3,
 });
@@ -92,10 +94,10 @@ export const DEFAULT_LAYOUT: readonly LayoutItem[] = [
   place('kpi.cac', 6, 0),
   place('kpi.conversionRate', 8, 0),
   place('kpi.orders', 10, 0),
-  place('chart.revenue', 0, 3),
-  place('chart.channelMix', 6, 3),
-  place('table.channels', 0, 12),
-  place('table.campaigns', 0, 21),
+  place('chart.revenue', 0, 4),
+  place('chart.channelMix', 6, 4),
+  place('table.channels', 0, 13),
+  place('table.campaigns', 0, 22),
 ];
 
 /** The first free row below every widget. */
