@@ -130,3 +130,13 @@ body {
 #widget-library::backdrop {
   background: rgb(0 0 0 / 0.25);
 }
+
+/* Recharts makes charts focusable for keyboard tooltips; a mouse click (or a
+   drag-to-zoom) shouldn't leave a focus ring behind, a keyboard focus should. */
+.recharts-surface:focus:not(:focus-visible) {
+  outline: none;
+}
+.recharts-surface:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

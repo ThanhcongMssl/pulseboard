@@ -3,7 +3,7 @@
 import type { Channel, ReportChannel, WidgetKind } from '@pulseboard/shared';
 import { useContext, useMemo, type ReactNode } from 'react';
 import { CHANNEL_LABELS } from '../../lib/channels.ts';
-import { toggleCampaign, toggleChannel } from '../../lib/filters.ts';
+import { toggleCampaign, toggleChannel, withRange } from '../../lib/filters.ts';
 import { isKpi, kpiTile, type KpiKind } from '../../lib/kpis.ts';
 import { channelStack, dailySeries, targetPacing } from '../../lib/series.ts';
 import { WIDGETS } from '../../lib/widgets.ts';
@@ -57,7 +57,7 @@ function KpiWidget({ kind }: { kind: KpiKind }) {
 }
 
 function RevenueWidget() {
-  const { filters, range, dates } = useDashboard();
+  const { filters, range, dates, setFilters } = useDashboard();
   const { data } = useReports(range);
   const points = useMemo(
     () => dailySeries(data?.reports ?? [], filters.channel, dates),
@@ -66,9 +66,13 @@ function RevenueWidget() {
   return (
     <Panel
       title={`Revenue vs. target · ${CHANNEL_LABELS[filters.channel]}`}
-      subtitle="Daily, with ad spend for comparison"
+      subtitle="Daily, with ad spend for comparison · drag across to zoom"
     >
-      <RevenueChart points={points} channel={filters.channel} />
+      <RevenueChart
+        points={points}
+        channel={filters.channel}
+        onZoom={(zoomed) => setFilters(withRange(filters, zoomed))}
+      />
     </Panel>
   );
 }
