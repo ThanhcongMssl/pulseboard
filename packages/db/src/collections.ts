@@ -1,5 +1,6 @@
 import type { Db } from 'mongodb';
 import type {
+  DashboardLayoutDoc,
   IngestRun,
   RawAdSpend,
   RawOrder,
@@ -17,6 +18,7 @@ export const COLLECTIONS = {
   reportsDaily: 'reports_daily',
   reportsCampaignDaily: 'reports_campaign_daily',
   ingestRuns: 'ingest_runs',
+  dashboardLayouts: 'dashboard_layouts',
 } as const;
 
 /** Typed handles to every collection, so callers never pass names as strings. */
@@ -28,6 +30,7 @@ export const collections = (db: Db) => ({
   reportsDaily: db.collection<ReportDaily>(COLLECTIONS.reportsDaily),
   reportsCampaignDaily: db.collection<ReportCampaignDaily>(COLLECTIONS.reportsCampaignDaily),
   ingestRuns: db.collection<IngestRun>(COLLECTIONS.ingestRuns),
+  dashboardLayouts: db.collection<DashboardLayoutDoc>(COLLECTIONS.dashboardLayouts),
 });
 
 export type Collections = ReturnType<typeof collections>;
