@@ -81,10 +81,13 @@ body {
   color: var(--ink-primary);
 }
 
-/* Dashboard grid (react-grid-layout), restyled with the tokens above. */
-.react-grid-item.react-grid-placeholder {
-  background: var(--accent);
-  opacity: 0.15;
+/* Dashboard grid (react-grid-layout), restyled with the tokens above. The
+   library's stylesheet loads after this one (with the lazily loaded grid), so
+   these rules lead with .react-grid-layout to win on specificity, not order. */
+.react-grid-layout .react-grid-item.react-grid-placeholder {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 2px dashed var(--accent);
+  opacity: 1;
   border-radius: 0.75rem;
 }
 
@@ -94,7 +97,7 @@ body {
   border-radius: 0.75rem;
 }
 
-.react-grid-item > .react-resizable-handle::after {
+.react-grid-layout .react-grid-item > .react-resizable-handle::after {
   border-color: var(--ink-muted);
 }
 
