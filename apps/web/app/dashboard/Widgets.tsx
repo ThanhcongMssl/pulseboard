@@ -9,7 +9,7 @@ import {
   type WidgetKind,
 } from '@pulseboard/shared';
 import dynamic from 'next/dynamic';
-import { useContext, useMemo, useState, type ReactNode } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { CHANNEL_COLORS, CHANNEL_LABELS } from '../../lib/channels.ts';
 import { toggleCampaign, toggleChannel, withRange } from '../../lib/filters.ts';
 import { formatCount } from '../../lib/format.ts';
@@ -30,21 +30,23 @@ import { useCampaignNames, useCampaigns, useOrders, useReports } from './data.ts
 import { DRAG_HANDLE, DragGrip, Panel, RemoveButton, WidgetChromeContext } from './Panel.tsx';
 import { Sparkline } from './Sparkline.tsx';
 import { useTweenedNumber } from './useTweenedNumber.ts';
+import { WidgetEmpty, WidgetError, WidgetSkeleton } from './WidgetState.tsx';
 
 // Recharts and the virtualizer load in their own chunks, after the page shell
 // and the KPI tiles, and only for the widgets on the dashboard.
-const Loading = () => <div aria-hidden className="h-full animate-pulse rounded-lg bg-line" />;
+const LoadingChart = () => <WidgetSkeleton shape="chart" label="Loading chart" />;
+const LoadingTable = () => <WidgetSkeleton shape="table" label="Loading orders" />;
 const RevenueChart = dynamic(() => import('./RevenueChart.tsx').then((m) => m.RevenueChart), {
   ssr: false,
-  loading: Loading,
+  loading: LoadingChart,
 });
 const ChannelMixChart = dynamic(
   () => import('./ChannelMixChart.tsx').then((m) => m.ChannelMixChart),
-  { ssr: false, loading: Loading },
+  { ssr: false, loading: LoadingChart },
 );
 const OrdersTable = dynamic(() => import('./OrdersTable.tsx').then((m) => m.OrdersTable), {
   ssr: false,
-  loading: Loading,
+  loading: LoadingTable,
 });
 
 /** The paid channel to narrow campaigns and orders to, or null for all of them. */
@@ -53,10 +55,6 @@ const asChannel = (channel: ReportChannel): Channel | null => (channel === 'all'
 const PAID: ReadonlySet<ReportChannel> = new Set(['paid_social', 'paid_search']);
 
 const TONE = { good: 'text-good', bad: 'text-critical', neutral: 'text-muted' } as const;
-
-function Note({ children }: { children: ReactNode }) {
-  return <p className="flex h-full items-center justify-center text-sm text-muted">{children}</p>;
-}
 
 /**
  * The previous period's reports while comparing, once loaded for exactly that
@@ -146,11 +144,17 @@ function RevenueWidget() {
       title={`Revenue vs. target · ${CHANNEL_LABELS[filters.channel]}`}
       subtitle="Daily, with ad spend for comparison · drag across to zoom"
     >
-      <RevenueChart
-        points={points}
-        channel={filters.channel}
-        onZoom={(zoomed) => setFilters(withRange(filters, zoomed))}
-      />
+      {points.every((p) => p.revenue === null) ? (
+        <WidgetEmpty>
+          No reports for {CHANNEL_LABELS[filters.channel]} in this range yet.
+        </WidgetEmpty>
+      ) : (
+        <RevenueChart
+          points={points}
+          channel={filters.channel}
+          onZoom={(zoomed) => setFilters(withRange(filters, zoomed))}
+        />
+      )}
     </Panel>
   );
 }
@@ -161,11 +165,15 @@ function ChannelMixWidget() {
   const points = useMemo(() => channelStack(data?.reports ?? [], dates), [data, dates]);
   return (
     <Panel title="Revenue by channel" subtitle="Daily, stacked">
-      <ChannelMixChart
-        points={points}
-        selected={filters.channel}
-        onSelect={(channel) => setFilters(toggleChannel(filters, channel))}
-      />
+      {points.every((p) => Object.keys(p).length === 1) ? (
+        <WidgetEmpty>No reports in this range yet.</WidgetEmpty>
+      ) : (
+        <ChannelMixChart
+          points={points}
+          selected={filters.channel}
+          onSelect={(channel) => setFilters(toggleChannel(filters, channel))}
+        />
+      )}
     </Panel>
   );
 }
@@ -194,13 +202,15 @@ function CampaignsWidget() {
       subtitle={`Attributed revenue per ad campaign · ${CHANNEL_LABELS[filters.channel]}`}
     >
       {unpaid ? (
-        <Note>{CHANNEL_LABELS[filters.channel]} is unpaid, so it has no campaigns.</Note>
+        <WidgetEmpty>
+          {CHANNEL_LABELS[filters.channel]} is unpaid, so it has no campaigns.
+        </WidgetEmpty>
       ) : campaigns.isError && !campaigns.data ? (
-        <Note>Couldn’t load campaigns.</Note>
+        <WidgetError onRetry={() => void campaigns.refetch()}>Couldn’t load campaigns.</WidgetError>
       ) : !campaigns.data ? (
-        <Note>Loading campaigns…</Note>
+        <WidgetSkeleton shape="table" label="Loading campaigns" />
       ) : campaigns.data.campaigns.length === 0 ? (
-        <Note>No campaign spend in this range.</Note>
+        <WidgetEmpty>No campaign spend in this range.</WidgetEmpty>
       ) : (
         <CampaignTable
           campaigns={campaigns.data.campaigns}
@@ -243,11 +253,11 @@ function OrdersWidget() {
       subtitle={`${total === null ? 'Orders' : `${formatCount(total)} orders`} · ${ORDER_LABELS[order.sort][order.dir]}${scope}`}
     >
       {orders.isError && !orders.data ? (
-        <Note>Couldn’t load orders.</Note>
+        <WidgetError onRetry={() => void orders.refetch()}>Couldn’t load orders.</WidgetError>
       ) : !orders.data ? (
-        <Note>Loading orders…</Note>
+        <WidgetSkeleton shape="table" label="Loading orders" />
       ) : rows.length === 0 ? (
-        <Note>No orders in this range.</Note>
+        <WidgetEmpty>No orders match these filters.</WidgetEmpty>
       ) : (
         <OrdersTable
           orders={rows}
